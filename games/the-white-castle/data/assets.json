@@ -1,0 +1,819 @@
+{
+  "schemaVersion": 1,
+  "atlases": [
+    {
+      "id": "steward-cards",
+      "file": "twc-steward-cards.jpg",
+      "columns": 5,
+      "rows": 3
+    },
+    {
+      "id": "diplomat-cards",
+      "file": "twc-diplomat-cards.jpg",
+      "columns": 6,
+      "rows": 2
+    },
+    {
+      "id": "daimyo-cards",
+      "file": "twc-daimyo-cards.jpg",
+      "columns": 3,
+      "rows": 3
+    },
+    {
+      "id": "garden-cards",
+      "file": "twc-garden-cards.png",
+      "columns": 5,
+      "rows": 2
+    },
+    {
+      "id": "starting-action-cards",
+      "file": "base/twc-starting-action-cards.png",
+      "columns": 3,
+      "rows": 1
+    },
+    {
+      "id": "starting-resource-cards",
+      "file": "base/twc-starting-resource-cards.png",
+      "columns": 5,
+      "rows": 2
+    },
+    {
+      "id": "yard-tiles",
+      "file": "twc-yard-tiles.png",
+      "columns": 8,
+      "rows": 2
+    }
+  ],
+  "assets": [
+    {
+      "id": "steward-card-1-face",
+      "materialId": "steward-card-1",
+      "atlasId": "steward-cards",
+      "index": 0,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "steward-card-2-face",
+      "materialId": "steward-card-2",
+      "atlasId": "steward-cards",
+      "index": 1,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "steward-card-3-face",
+      "materialId": "steward-card-3",
+      "atlasId": "steward-cards",
+      "index": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "steward-card-4-face",
+      "materialId": "steward-card-4",
+      "atlasId": "steward-cards",
+      "index": 3,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "steward-card-5-face",
+      "materialId": "steward-card-5",
+      "atlasId": "steward-cards",
+      "index": 4,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "steward-card-6-face",
+      "materialId": "steward-card-6",
+      "atlasId": "steward-cards",
+      "index": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "steward-card-7-face",
+      "materialId": "steward-card-7",
+      "atlasId": "steward-cards",
+      "index": 6,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "steward-card-8-face",
+      "materialId": "steward-card-8",
+      "atlasId": "steward-cards",
+      "index": 7,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "steward-card-9-face",
+      "materialId": "steward-card-9",
+      "atlasId": "steward-cards",
+      "index": 8,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "steward-card-10-face",
+      "materialId": "steward-card-10",
+      "atlasId": "steward-cards",
+      "index": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "steward-card-11-face",
+      "materialId": "steward-card-11",
+      "atlasId": "steward-cards",
+      "index": 10,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "steward-card-12-face",
+      "materialId": "steward-card-12",
+      "atlasId": "steward-cards",
+      "index": 11,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "steward-card-13-face",
+      "materialId": "steward-card-13",
+      "atlasId": "steward-cards",
+      "index": 12,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "steward-card-14-face",
+      "materialId": "steward-card-14",
+      "atlasId": "steward-cards",
+      "index": 13,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "steward-card-15-face",
+      "materialId": "steward-card-15",
+      "atlasId": "steward-cards",
+      "index": 14,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "diplomat-card-1-face",
+      "materialId": "diplomat-card-1",
+      "atlasId": "diplomat-cards",
+      "index": 0,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "diplomat-card-2-face",
+      "materialId": "diplomat-card-2",
+      "atlasId": "diplomat-cards",
+      "index": 1,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "diplomat-card-3-face",
+      "materialId": "diplomat-card-3",
+      "atlasId": "diplomat-cards",
+      "index": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "diplomat-card-4-face",
+      "materialId": "diplomat-card-4",
+      "atlasId": "diplomat-cards",
+      "index": 3,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "diplomat-card-5-face",
+      "materialId": "diplomat-card-5",
+      "atlasId": "diplomat-cards",
+      "index": 4,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "diplomat-card-6-face",
+      "materialId": "diplomat-card-6",
+      "atlasId": "diplomat-cards",
+      "index": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "diplomat-card-7-face",
+      "materialId": "diplomat-card-7",
+      "atlasId": "diplomat-cards",
+      "index": 6,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "diplomat-card-8-face",
+      "materialId": "diplomat-card-8",
+      "atlasId": "diplomat-cards",
+      "index": 7,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "diplomat-card-9-face",
+      "materialId": "diplomat-card-9",
+      "atlasId": "diplomat-cards",
+      "index": 8,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "diplomat-card-10-face",
+      "materialId": "diplomat-card-10",
+      "atlasId": "diplomat-cards",
+      "index": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "diplomat-card-11-face",
+      "materialId": "diplomat-card-11",
+      "atlasId": "diplomat-cards",
+      "index": 10,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "diplomat-card-12-face",
+      "materialId": "diplomat-card-12",
+      "atlasId": "diplomat-cards",
+      "index": 11,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "daimyo-card-1-face",
+      "materialId": "daimyo-card-1",
+      "atlasId": "daimyo-cards",
+      "index": 0,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "daimyo-card-2-face",
+      "materialId": "daimyo-card-2",
+      "atlasId": "daimyo-cards",
+      "index": 1,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "daimyo-card-3-face",
+      "materialId": "daimyo-card-3",
+      "atlasId": "daimyo-cards",
+      "index": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "daimyo-card-4-face",
+      "materialId": "daimyo-card-4",
+      "atlasId": "daimyo-cards",
+      "index": 3,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "daimyo-card-5-face",
+      "materialId": "daimyo-card-5",
+      "atlasId": "daimyo-cards",
+      "index": 4,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "daimyo-card-6-face",
+      "materialId": "daimyo-card-6",
+      "atlasId": "daimyo-cards",
+      "index": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "daimyo-card-7-face",
+      "materialId": "daimyo-card-7",
+      "atlasId": "daimyo-cards",
+      "index": 6,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "daimyo-card-8-face",
+      "materialId": "daimyo-card-8",
+      "atlasId": "daimyo-cards",
+      "index": 7,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "daimyo-card-9-face",
+      "materialId": "daimyo-card-9",
+      "atlasId": "daimyo-cards",
+      "index": 8,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "garden-card-1-face",
+      "materialId": "garden-card-1",
+      "atlasId": "garden-cards",
+      "index": 0,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "garden-card-2-face",
+      "materialId": "garden-card-2",
+      "atlasId": "garden-cards",
+      "index": 1,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "garden-card-3-face",
+      "materialId": "garden-card-3",
+      "atlasId": "garden-cards",
+      "index": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "garden-card-4-face",
+      "materialId": "garden-card-4",
+      "atlasId": "garden-cards",
+      "index": 3,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "garden-card-5-face",
+      "materialId": "garden-card-5",
+      "atlasId": "garden-cards",
+      "index": 4,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "garden-card-6-face",
+      "materialId": "garden-card-6",
+      "atlasId": "garden-cards",
+      "index": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "garden-card-7-face",
+      "materialId": "garden-card-7",
+      "atlasId": "garden-cards",
+      "index": 6,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "garden-card-8-face",
+      "materialId": "garden-card-8",
+      "atlasId": "garden-cards",
+      "index": 7,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "garden-card-9-face",
+      "materialId": "garden-card-9",
+      "atlasId": "garden-cards",
+      "index": 8,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "garden-card-10-face",
+      "materialId": "garden-card-10",
+      "atlasId": "garden-cards",
+      "index": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "starting-action-card-1-face",
+      "materialId": "starting-action-card-1",
+      "atlasId": "starting-action-cards",
+      "index": 0,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "starting-action-card-2-face",
+      "materialId": "starting-action-card-2",
+      "atlasId": "starting-action-cards",
+      "index": 0,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "starting-action-card-3-face",
+      "materialId": "starting-action-card-3",
+      "atlasId": "starting-action-cards",
+      "index": 1,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "starting-action-card-4-face",
+      "materialId": "starting-action-card-4",
+      "atlasId": "starting-action-cards",
+      "index": 1,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "starting-action-card-5-face",
+      "materialId": "starting-action-card-5",
+      "atlasId": "starting-action-cards",
+      "index": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "starting-action-card-6-face",
+      "materialId": "starting-action-card-6",
+      "atlasId": "starting-action-cards",
+      "index": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "starting-resource-card-1-face",
+      "materialId": "starting-resource-card-1",
+      "atlasId": "starting-resource-cards",
+      "index": 0,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "starting-resource-card-2-face",
+      "materialId": "starting-resource-card-2",
+      "atlasId": "starting-resource-cards",
+      "index": 1,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "starting-resource-card-3-face",
+      "materialId": "starting-resource-card-3",
+      "atlasId": "starting-resource-cards",
+      "index": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "starting-resource-card-4-face",
+      "materialId": "starting-resource-card-4",
+      "atlasId": "starting-resource-cards",
+      "index": 3,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "starting-resource-card-5-face",
+      "materialId": "starting-resource-card-5",
+      "atlasId": "starting-resource-cards",
+      "index": 4,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "starting-resource-card-6-face",
+      "materialId": "starting-resource-card-6",
+      "atlasId": "starting-resource-cards",
+      "index": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "starting-resource-card-7-face",
+      "materialId": "starting-resource-card-7",
+      "atlasId": "starting-resource-cards",
+      "index": 6,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "starting-resource-card-8-face",
+      "materialId": "starting-resource-card-8",
+      "atlasId": "starting-resource-cards",
+      "index": 7,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "starting-resource-card-9-face",
+      "materialId": "starting-resource-card-9",
+      "atlasId": "starting-resource-cards",
+      "index": 8,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "yard-tile-1-face",
+      "materialId": "yard-tile-1",
+      "atlasId": "yard-tiles",
+      "index": 0,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "yard-tile-2-face",
+      "materialId": "yard-tile-2",
+      "atlasId": "yard-tiles",
+      "index": 1,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "yard-tile-3-face",
+      "materialId": "yard-tile-3",
+      "atlasId": "yard-tiles",
+      "index": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "yard-tile-4-face",
+      "materialId": "yard-tile-4",
+      "atlasId": "yard-tiles",
+      "index": 3,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "yard-tile-5-face",
+      "materialId": "yard-tile-5",
+      "atlasId": "yard-tiles",
+      "index": 4,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "yard-tile-6-face",
+      "materialId": "yard-tile-6",
+      "atlasId": "yard-tiles",
+      "index": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "yard-tile-7-face",
+      "materialId": "yard-tile-7",
+      "atlasId": "yard-tiles",
+      "index": 6,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "yard-tile-8-face",
+      "materialId": "yard-tile-8",
+      "atlasId": "yard-tiles",
+      "index": 7,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "yard-tile-1-gold-face",
+      "materialId": "yard-tile-1",
+      "atlasId": "yard-tiles",
+      "index": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "yard-tile-2-gold-face",
+      "materialId": "yard-tile-2",
+      "atlasId": "yard-tiles",
+      "index": 8,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "yard-tile-3-gold-face",
+      "materialId": "yard-tile-3",
+      "atlasId": "yard-tiles",
+      "index": 11,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "yard-tile-4-gold-face",
+      "materialId": "yard-tile-4",
+      "atlasId": "yard-tiles",
+      "index": 10,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "yard-tile-5-gold-face",
+      "materialId": "yard-tile-5",
+      "atlasId": "yard-tiles",
+      "index": 13,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "yard-tile-6-gold-face",
+      "materialId": "yard-tile-6",
+      "atlasId": "yard-tiles",
+      "index": 12,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "yard-tile-7-gold-face",
+      "materialId": "yard-tile-7",
+      "atlasId": "yard-tiles",
+      "index": 15,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "yard-tile-8-gold-face",
+      "materialId": "yard-tile-8",
+      "atlasId": "yard-tiles",
+      "index": 14,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    }
+  ]
+}

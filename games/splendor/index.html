@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Splendor 璀璨宝石</title>
+<link rel="stylesheet" href="/__bglab_shared/game-shell.css">
+<link rel="stylesheet" href="style.css?legacy-ui-v1">
+<style>
+  #init-loading {
+    position: fixed; inset: 0; display: flex;
+    align-items: center; justify-content: center;
+    background: #0d0d1a; color: #d4c8a8;
+    font-size: 18px; z-index: 9999;
+  }
+</style>
+</head>
+<body>
+<div id="init-loading">等待游戏配置...</div>
+<div id="app"></div>
+<!-- Static smoke-test marker; the live timeline is rendered by the shared shell. -->
+<template id="static-log-label"><div class="section-label">行动记录</div></template>
+
+<script src="src/core/splendor-engine.js?hsa=20260803-hsa026"></script>
+<script src="src/adapter/scoring-frame.js?hsa=20260908-public-horizon"></script>
+<script src="src/adapter/action-frame.js?hsa=20260830"></script>
+<script src="src/adapter/public-outcome.js"></script>
+<script src="src/adapter/bglab-adapter.js?hsa=20260908-public-market"></script>
+<script src="/__bglab_shared/game-bridge.js"></script>
+<script src="src/adapter/ws-bridge.js?hsa=20260803-hsa026"></script>
+<script src="/__bglab_shared/action-history.js"></script>
+<script src="/__bglab_shared/draft-lifecycle.js"></script>
+<script src="/__bglab_shared/game-shell.js"></script>
+<script src="src/ui/splendor-presenter.js"></script>
+<script src="src/ui/splendor-view-model.js?legacy-ui-v1"></script>
+<script src="src/ui/splendor-ui.js?hsa=20260803-hsa026&amp;legacy-ui-v1"></script>
+
+<script>
+// 等待 bridge 连接，然后通过 WS 接收游戏配置
+(function() {
+  Bridge.init();
+  const loading = document.getElementById('init-loading');
+  const check = setInterval(() => {
+    if (Bridge._ready) {
+      clearInterval(check);
+      if (loading) loading.textContent = '已连接，等待游戏开始...';
+    }
+  }, 200);
+})();
+</script>
+</body>
+</html>

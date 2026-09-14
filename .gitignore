@@ -1,0 +1,18 @@
+/.venv/
+.env
+.env.*
+!.env.example
+.bglab/
+__pycache__/
+*.py[cod]
+node_modules/
+dist/
+*.log
+
+# Local data and development output
+work/
+tests/
+docs/
+transcripts/
+*.jsonl
+*.map

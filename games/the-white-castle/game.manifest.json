@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 2,
+  "id": "the-white-castle",
+  "title": "白城堡",
+  "language": "typescript",
+  "aliases": [
+    "姬路城",
+    "白城堡",
+    "The White Castle",
+    "White Castle",
+    "himeji"
+  ],
+  "players": {
+    "min": 2,
+    "max": 4
+  },
+  "frontend": {
+    "entry": "dist/index.html"
+  },
+  "rules": {
+    "path": "data/rules.md",
+    "sessionHeadPath": "data/session-head.md"
+  },
+  "skills": {
+    "path": "skills"
+  },
+  "semantic": {
+    "modelActions": "semantic/model-actions.json",
+    "engineMapping": "semantic/engine-mapping.json"
+  },
+  "commands": {
+    "build": "npm run build"
+  },
+  "adapter": {
+    "protocolVersion": 2,
+    "snapshotVersion": 1,
+    "restoreVersions": [
+      1
+    ],
+    "script": "src/adapter/bglab-adapter.ts",
+    "actionProfile": "generic-v1",
+    "actionSchema": "data/action-chain.schema.json",
+    "capabilities": {
+      "atomicActionChain": true,
+      "decisionPrograms": "bounded",
+      "informationModel": "perfect",
+      "turnOrder": "sequential",
+      "chanceBeforeBoundary": "none",
+      "completePrefixSubgraph": true
+    },
+    "authorityEnumeration": {
+      "maxNodes": 20000,
+      "maxTimeMs": 5000,
+      "pageSize": 12
+    }
+  },
+  "coverage": {
+    "actionFamilies": [
+      "chooseStartingPair",
+      "draftDie",
+      "placeDie",
+      "chooseEffectOption",
+      "selectCastleTileAction",
+      "exchangeSeal",
+      "beginMajorAction",
+      "selectMajorActionSource",
+      "selectMajorActionTarget",
+      "cancelMajorActionSelection",
+      "confirmMajorAction",
+      "refreshCastleRoom",
+      "finishMajorAction",
+      "finishResolution"
+    ],
+    "effectFamilies": [
+      "DieDrafted",
+      "DiePlaced",
+      "ResourceChanged",
+      "InfluenceChanged",
+      "MemberMoved",
+      "CardMoved",
+      "ChoiceRequired",
+      "EffectResolved",
+      "TurnStarted",
+      "RoundEnded",
+      "RoundStarted",
+      "GameScored"
+    ],
+    "boundaryReasons": [
+      "turn_passed",
+      "other_actor",
+      "game_finished"
+    ]
+  }
+}

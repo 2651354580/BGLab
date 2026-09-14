@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "engine": "splendor",
+  "actions": [
+    {
+      "name": "take_gems",
+      "description": "Choose at most three physical colored gems for this action; use the current DecisionFrame to decide whether they are three distinct colors or one legal same-color pair.",
+      "fields": {
+        "colors": {
+          "type": "array",
+          "items": {"type": "string", "enum": ["C", "S", "E", "R", "O"]},
+          "minItems": 1,
+          "maxItems": 3,
+          "description": "One entry per physical colored gem, never more than three entries; repeat one color only for a currently legal same-color pair."
+        }
+      }
+    },
+    {
+      "name": "buy_card",
+      "description": "Buy one visible market card or one card reserved by this seat, choosing the physical tokens paid after bonuses.",
+      "fields": {
+        "source": {"type": "string", "enum": ["market", "reserved"]},
+        "card": {"type": "integer", "description": "Stable card identifier from the current DecisionFrame."},
+        "payment": {
+          "type": "array",
+          "items": {"type": "string", "enum": ["C", "S", "E", "R", "O", "G"]},
+          "minItems": 0,
+          "maxItems": 10,
+          "description": "One entry per physical token spent, after the displayed bonuses have already been applied. Repeat colors for multiple tokens; G replaces any color. Example: [C,C,G] pays two C tokens and one gold. Use [] only when payableAfterBonuses is zero in every color."
+        }
+      }
+    },
+    {
+      "name": "reserve_card",
+      "description": "Reserve one visible market card or the top card of a deck level.",
+      "fields": {
+        "source": {"type": "string", "enum": ["market", "deck"]},
+        "card": {"type": "integer", "description": "Market card identifier or deck level from the current DecisionFrame."}
+      }
+    },
+    {
+      "name": "discard_gem",
+      "description": "Choose a colored or gold gem returned to satisfy the token limit.",
+      "fields": {
+        "color": {"type": "string", "enum": ["C", "S", "E", "R", "O", "G"]},
+        "count": {"type": "integer", "minimum": 1}
+      }
+    },
+    {
+      "name": "choose_noble",
+      "description": "Choose one currently eligible noble when the authority exposes a real choice.",
+      "fields": {
+        "noble": {"type": "integer", "description": "Stable noble identifier from the current DecisionFrame."}
+      }
+    }
+  ],
+  "canonicalization": {
+    "take_gems.colors": ["C", "S", "E", "R", "O"],
+    "buy_card.payment": ["C", "S", "E", "R", "O", "G"]
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bglab.local/schemas/decision-frame.schema.json",
+  "title": "BGLab public DecisionFrame",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "authority",
+    "decisionId",
+    "turnGroupId",
+    "actorSeat",
+    "publicState",
+    "seatPrivateState",
+    "immediateActions",
+    "outcomeCoverage",
+    "constraints"
+  ],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "authority": {"const": "game-adapter"},
+    "decisionId": {"type": "string", "minLength": 1},
+    "turnGroupId": {"type": "string", "minLength": 1},
+    "actorSeat": {"type": "integer", "minimum": 0},
+    "publicState": {"type": "object"},
+    "seatPrivateState": {
+      "oneOf": [
+        {"type": "object"},
+        {"type": "null"}
+      ]
+    },
+    "immediateActions": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "outcomeCoverage": {"type": "object"},
+    "constraints": {"type": "array"}
+  },
+  "additionalProperties": false
+}

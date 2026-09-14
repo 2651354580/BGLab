@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "engine": "azul",
+  "actions": [
+    {
+      "name": "draft_tiles",
+      "description": "Choose one source and one color present at that source.",
+      "fields": {
+        "source": {"type": "string", "enum": ["factory", "center"]},
+        "source_index": {
+          "type": ["integer", "null"],
+          "default": null,
+          "description": "Factory index is required for a factory; null for the center. Omission means null."
+        },
+        "color": {"type": "string", "enum": ["cyan", "red", "blue", "yellow", "black"]}
+      }
+    },
+    {
+      "name": "place_tiles",
+      "description": "Choose a pattern line or the floor for the drafted tiles.",
+      "fields": {
+        "destination": {"type": "string", "enum": ["pattern", "floor"]},
+        "row": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 4,
+          "default": null,
+          "description": "Pattern-line index 0..4 has capacity 1..5 and is required for a pattern line. Null for the floor; omission means null."
+        }
+      }
+    }
+  ]
+}

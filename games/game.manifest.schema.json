@@ -1,0 +1,223 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bglab.local/schemas/game.manifest.schema.json",
+  "title": "BGLab game package manifest",
+  "oneOf": [
+    {"$ref": "#/$defs/v1"},
+    {"$ref": "#/$defs/v2"}
+  ],
+  "$defs": {
+    "path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stringList": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "players": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["min", "max"],
+      "properties": {
+        "min": {"type": "integer", "minimum": 1, "maximum": 12},
+        "max": {"type": "integer", "minimum": 1, "maximum": 12}
+      }
+    },
+    "pathObject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": {"path": {"$ref": "#/$defs/path"}}
+    },
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": {
+        "path": {"$ref": "#/$defs/path"},
+        "sessionHeadPath": {"$ref": "#/$defs/path"}
+      }
+    },
+    "common": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion", "id", "title", "aliases", "players",
+        "frontend", "rules", "adapter"
+      ],
+      "properties": {
+        "schemaVersion": {"type": "integer"},
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+        "title": {"type": "string", "minLength": 1},
+        "language": {"enum": ["javascript", "typescript"]},
+        "aliases": {"$ref": "#/$defs/stringList"},
+        "players": {"$ref": "#/$defs/players"},
+        "frontend": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["entry"],
+          "properties": {"entry": {"$ref": "#/$defs/path"}}
+        },
+        "rules": {"$ref": "#/$defs/rules"},
+        "skills": {"$ref": "#/$defs/pathObject"},
+        "commands": {
+          "type": "object",
+          "additionalProperties": {"type": "string", "minLength": 1}
+        },
+        "tests": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["paths"],
+          "properties": {
+            "paths": {
+              "type": "array",
+              "items": {"$ref": "#/$defs/path"},
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          }
+        },
+        "adapter": {"type": "object"},
+        "semantic": {"$ref": "#/$defs/semantic"},
+        "hostRecovery": {"$ref": "#/$defs/hostRecovery"},
+        "coverage": {"type": "object"}
+      }
+    },
+    "hostRecovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preferredStep"],
+      "properties": {
+        "preferredStep": {
+          "type": "object",
+          "required": ["op"],
+          "propertyNames": {"minLength": 1, "pattern": "\\S"},
+          "additionalProperties": {"type": "string", "minLength": 1, "pattern": "\\S"}
+        }
+      }
+    },
+    "v1Adapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocolVersion", "snapshotVersion", "script", "actionProfile"
+      ],
+      "properties": {
+        "protocolVersion": {"const": 1},
+        "snapshotVersion": {"type": "integer", "minimum": 1},
+        "restoreVersions": {
+          "type": "array",
+          "items": {"type": "integer", "minimum": 1},
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "script": {"$ref": "#/$defs/path"},
+        "actionProfile": {"type": "string", "minLength": 1},
+        "actionSchema": {"$ref": "#/$defs/path"}
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "atomicActionChain", "decisionPrograms", "informationModel",
+        "turnOrder", "chanceBeforeBoundary"
+      ],
+      "properties": {
+        "atomicActionChain": {"type": "boolean"},
+        "decisionPrograms": {"enum": ["finite", "bounded", "none"]},
+        "informationModel": {"enum": ["perfect", "seat_private"]},
+        "turnOrder": {"const": "sequential"},
+        "chanceBeforeBoundary": {"enum": ["none", "declared_boundary"]},
+        "completePrefixSubgraph": {
+          "type": "boolean",
+          "default": false,
+          "description": "Supports semantic-route-automaton for validated prefixes and exact semantic-route-hydrate. Omission means unsupported; each response must still prove complete coverage and exact replay."
+        }
+      }
+    },
+    "authorityEnumeration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxNodes", "maxTimeMs", "pageSize"],
+      "properties": {
+        "maxNodes": {"type": "integer", "minimum": 1, "maximum": 20000},
+        "maxTimeMs": {"type": "integer", "minimum": 1, "maximum": 5000},
+        "pageSize": {"type": "integer", "minimum": 1, "maximum": 12}
+      }
+    },
+    "v2Adapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocolVersion", "snapshotVersion", "restoreVersions", "script",
+        "actionProfile", "actionSchema", "capabilities", "authorityEnumeration"
+      ],
+      "properties": {
+        "protocolVersion": {"const": 2},
+        "snapshotVersion": {"type": "integer", "minimum": 1},
+        "restoreVersions": {
+          "type": "array",
+          "items": {"type": "integer", "minimum": 1},
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "script": {"$ref": "#/$defs/path"},
+        "actionProfile": {"type": "string", "minLength": 1},
+        "actionSchema": {"$ref": "#/$defs/path"},
+        "capabilities": {"$ref": "#/$defs/capabilities"},
+        "authorityEnumeration": {"$ref": "#/$defs/authorityEnumeration"}
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actionFamilies", "effectFamilies", "boundaryReasons"],
+      "properties": {
+        "actionFamilies": {"$ref": "#/$defs/stringList"},
+        "effectFamilies": {"$ref": "#/$defs/stringList"},
+        "boundaryReasons": {"$ref": "#/$defs/stringList"}
+      }
+    },
+    "semantic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modelActions", "engineMapping"],
+      "properties": {
+        "modelActions": {"$ref": "#/$defs/path"},
+        "engineMapping": {"$ref": "#/$defs/path"}
+      }
+    },
+    "v1": {
+      "allOf": [
+        {"$ref": "#/$defs/common"},
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {"const": 1},
+            "hostRecovery": false,
+            "adapter": {"$ref": "#/$defs/v1Adapter"}
+          }
+        }
+      ]
+    },
+    "v2": {
+      "allOf": [
+        {"$ref": "#/$defs/common"},
+        {
+          "type": "object",
+          "required": ["language", "coverage", "semantic"],
+          "properties": {
+            "schemaVersion": {"const": 2},
+            "adapter": {"$ref": "#/$defs/v2Adapter"},
+            "semantic": {"$ref": "#/$defs/semantic"},
+            "coverage": {"$ref": "#/$defs/coverage"}
+          }
+        }
+      ]
+    }
+  }
+}

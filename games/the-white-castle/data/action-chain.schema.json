@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "The White Castle internal Adapter route and transaction",
+  "$comment": "Internal authority-clone/Adapter schema; never exposed as the model-facing semantic-v2 BgAct schema.",
+  "type": "object",
+  "properties": {
+    "mode": {"enum": ["enumerate_routes", "commit"]},
+    "request": {
+      "type": "object",
+      "properties": {
+        "rootIds": {"type": "array", "items": {"type": "string"}},
+        "requirements": {"type": "array", "items": {"type": "object", "properties": {"metric": {"type": "string"}, "min": {"type": "number"}, "max": {"type": "number"}, "equals": {}}, "required": ["metric"], "additionalProperties": false}},
+        "stepsContain": {"type": "array", "minItems": 1, "items": {"type": "object", "minProperties": 1, "additionalProperties": {"type": ["string", "number", "boolean", "null"]}}},
+        "offset": {"type": "integer", "minimum": 0},
+        "limit": {"type": "integer", "minimum": 1, "maximum": 12},
+        "cursor": {"type": "string"},
+        "programId": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "programId": {"type": "string"},
+    "steps": {
+      "type": "array",
+      "minItems": 2,
+      "description": "整轮有序行动链。第一步固定 begin；其余步骤严格按 BgObserve 的 nextActions 逐步模拟，直到完成本回合。",
+      "items": {
+        "oneOf": [
+          {"type":"object","required":["op","action"],"properties":{"op":{"const":"begin"},"action":{"const":"turn"}},"additionalProperties":false},
+          {"type":"object","required":["op","offer"],"properties":{"op":{"const":"chooseStartingPair"},"offer":{"type":"integer","minimum":0}},"additionalProperties":false},
+          {"type":"object","required":["op","bridge","end"],"properties":{"op":{"const":"draftDie"},"bridge":{"enum":["black","white","coral"]},"end":{"enum":["left","right"]}},"additionalProperties":false},
+          {"type":"object","required":["op","workspace"],"properties":{"op":{"const":"placeDie"},"workspace":{"type":"string"}},"additionalProperties":false},
+          {"type":"object","required":["op","effectId","option"],"properties":{"op":{"const":"chooseEffectOption"},"effectId":{"type":"string"},"option":{"type":"integer","minimum":0}},"additionalProperties":false},
+          {"type":"object","required":["op","effectId","room","rowId"],"properties":{"op":{"const":"selectCastleTileAction"},"effectId":{"type":"string"},"room":{"type":"string"},"rowId":{"type":"string"}},"additionalProperties":false},
+          {"type":"object","required":["op","receive"],"properties":{"op":{"const":"exchangeSeal"},"receive":{"enum":["coins","seals","food","iron","pearl"]}},"additionalProperties":false},
+          {"type":"object","required":["op","mode"],"properties":{"op":{"const":"beginMajorAction"},"mode":{"enum":["recruit","promote","gardener","warrior"]}},"additionalProperties":false},
+          {"type":"object","required":["op","member"],"properties":{"op":{"const":"selectMajorActionSource"},"member":{"type":"string"}},"additionalProperties":false},
+          {"type":"object","required":["op","target","levels"],"properties":{"op":{"const":"selectMajorActionTarget"},"target":{"type":"string","pattern":"^(steward-|diplomat-|daimyo$)"},"levels":{"enum":[1,2]}},"additionalProperties":false},
+          {"type":"object","required":["op","target"],"properties":{"op":{"const":"selectMajorActionTarget"},"target":{"type":"string","not":{"pattern":"^(steward-|diplomat-|daimyo$)"}}},"additionalProperties":false},
+          {"type":"object","required":["op"],"properties":{"op":{"enum":["cancelMajorActionSelection","confirmMajorAction","finishMajorAction","finishResolution"]}},"additionalProperties":false},
+          {"type":"object","required":["op","room"],"properties":{"op":{"const":"refreshCastleRoom"},"room":{"type":"string"}},"additionalProperties":false}
+        ]
+      }
+    }
+  },
+  "oneOf": [
+    {"properties": {"mode": {"const": "enumerate_routes"}}, "required": ["mode", "request"], "not": {"anyOf": [{"required": ["steps"]}, {"required": ["programId"]}]}},
+    {"properties": {"mode": {"const": "commit"}}, "required": ["mode", "programId", "steps"], "not": {"required": ["request"]}}
+  ],
+  "additionalProperties": false
+}

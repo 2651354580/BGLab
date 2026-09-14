@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "engine": "splendor",
+  "mechanicalOps": [],
+  "actionRoles": {
+    "pay_gem": "derived",
+    "discard_gem": "choice",
+    "choose_noble": "choice"
+  },
+  "rules": [
+    {
+      "semanticAction": "take_gems",
+      "steps": [
+        {
+          "op": "begin",
+          "where": {"action": "take_gems"}
+        },
+        {
+          "op": "take_gem",
+          "repeat": {"min": 1, "max": 3},
+          "collect": {
+            "colors": {"field": "color", "repeatBy": "count", "repeatByDefault": 1}
+          }
+        }
+      ],
+      "defaults": {}
+    },
+    {
+      "semanticAction": "buy_card",
+      "steps": [
+        {
+          "op": "begin",
+          "where": {"action": "buy_card"}
+        },
+        {
+          "op": "select_card",
+          "capture": {"source": "source", "card": "cardId"}
+        },
+        {
+          "op": "pay_gem",
+          "repeat": {"min": 1, "max": 6},
+          "collect": {
+            "payment": {"field": "color", "repeatBy": "count", "repeatByDefault": 1}
+          }
+        }
+      ],
+      "defaults": {}
+    },
+    {
+      "semanticAction": "buy_card",
+      "steps": [
+        {"op": "begin", "where": {"action": "buy_card"}},
+        {"op": "select_card", "capture": {"source": "source", "card": "cardId"}}
+      ],
+      "defaults": {"payment": []}
+    },
+    {
+      "semanticAction": "reserve_card",
+      "steps": [
+        {
+          "op": "begin",
+          "where": {"action": "reserve_card"}
+        },
+        {
+          "op": "select_card",
+          "where": {"source": "market"},
+          "capture": {"card": "cardId"}
+        }
+      ],
+      "defaults": {"source": "market"}
+    },
+    {
+      "semanticAction": "reserve_card",
+      "steps": [
+        {
+          "op": "begin",
+          "where": {"action": "reserve_card"}
+        },
+        {
+          "op": "select_deck",
+          "capture": {"card": "level"}
+        }
+      ],
+      "defaults": {"source": "deck"}
+    },
+    {
+      "semanticAction": "choose_noble",
+      "steps": [
+        {
+          "op": "begin",
+          "where": {"action": "buy_card"}
+        },
+        {
+          "op": "choose_noble",
+          "capture": {"noble": "nobleId"}
+        }
+      ],
+      "defaults": {}
+    },
+    {
+      "semanticAction": "discard_gem",
+      "steps": [
+        {
+          "op": "begin",
+          "where": {"action": "reserve_card"}
+        },
+        {
+          "op": "discard_gem",
+          "capture": {"color": "color", "count": "count"}
+        }
+      ],
+      "defaults": {}
+    },
+    {
+      "semanticAction": "pay_gem",
+      "steps": [
+        {
+          "op": "pay_gem",
+          "capture": {"color": "color", "count": "count"}
+        }
+      ],
+      "defaults": {}
+    },
+    {
+      "semanticAction": "discard_gem",
+      "steps": [
+        {
+          "op": "discard_gem",
+          "capture": {"color": "color", "count": "count"}
+        }
+      ],
+      "defaults": {}
+    },
+    {
+      "semanticAction": "choose_noble",
+      "steps": [
+        {
+          "op": "choose_noble",
+          "capture": {"noble": "nobleId"}
+        }
+      ],
+      "defaults": {}
+    }
+  ],
+  "outcomePresentation": "summary-v1",
+  "outcomeProjection": [
+    "card",
+    "noble",
+    "gemsDelta",
+    "gemsPaidTotal",
+    "gemsAfterTotal",
+    "opponentBuyNowSeatsBefore",
+    "opponentReserveIfStillVisibleSeatsBefore",
+    "selectedMarketCardLeaves",
+    "selectedMarketCardAvailableAfter",
+    "replacementRevealedImmediately",
+    "replacementIdentity",
+    "reservedDelta",
+    "cardsBought",
+    "noblesGained",
+    "scoreDelta",
+    "scoreAfter",
+    "finalRoundStarted",
+    "gameFinished",
+    "nextPlayer",
+    "phase",
+    "remaining.gems",
+    "remaining.bank"
+  ],
+  "outcomeRequirements": [
+    {
+      "when": {"action": "buy_card"},
+      "required": ["gemsPaidTotal", "gemsAfterTotal"]
+    },
+    {
+      "when": {
+        "action": "buy_card",
+        "arguments": {"source": "market"}
+      },
+      "required": [
+        "selectedMarketCardLeaves",
+        "selectedMarketCardAvailableAfter",
+        "replacementRevealedImmediately",
+        "replacementIdentity"
+      ]
+    },
+    {
+      "when": {"action": "reserve_card"},
+      "required": ["reservedDelta", "gemsAfterTotal"]
+    },
+    {
+      "when": {
+        "action": "reserve_card",
+        "arguments": {"source": "market"}
+      },
+      "required": [
+        "selectedMarketCardLeaves",
+        "selectedMarketCardAvailableAfter",
+        "replacementRevealedImmediately",
+        "replacementIdentity"
+      ]
+    }
+  ]
+}

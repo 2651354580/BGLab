@@ -1,0 +1,22 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"Azul internal Adapter route and transaction",
+  "$comment":"Internal authority-clone/Adapter schema; never exposed as the model-facing semantic-v2 BgAct schema.",
+  "type":"object",
+  "properties":{"mode":{"enum":["enumerate_routes","commit"]},"request":{"type":"object","properties":{"rootIds":{"type":"array","items":{"type":"string"}},"requirements":{"type":"array","items":{"type":"object","properties":{"metric":{"type":"string"},"min":{"type":"number"},"max":{"type":"number"},"equals":{}},"required":["metric"],"additionalProperties":false}},"stepsContain":{"type":"array","minItems":1,"items":{"type":"object","minProperties":1,"additionalProperties":{"type":["string","number","boolean","null"]}}},"offset":{"type":"integer","minimum":0},"limit":{"type":"integer","minimum":1,"maximum":12},"cursor":{"type":"string"},"programId":{"type":"string"}},"additionalProperties":false},"programId":{"type":"string"},"steps":{"type":"array","minItems":4,"maxItems":4,"items":{"oneOf":[
+    {"type":"object","required":["op","action"],"properties":{"op":{"const":"begin"},"action":{"const":"turn"}},"additionalProperties":false},
+    {"oneOf":[
+      {"type":"object","required":["op","source","factoryIndex"],"properties":{"op":{"const":"select_source"},"source":{"const":"factory"},"factoryIndex":{"type":"integer","minimum":0,"maximum":8}},"additionalProperties":false},
+      {"type":"object","required":["op","source"],"properties":{"op":{"const":"select_source"},"source":{"const":"center"}},"additionalProperties":false}
+    ]},
+    {"type":"object","required":["op","color"],"properties":{"op":{"const":"select_color"},"color":{"enum":["black","cyan","blue","yellow","red"]}},"additionalProperties":false},
+    {"oneOf":[
+      {"type":"object","required":["op","destination","row"],"properties":{"op":{"const":"place_tiles"},"destination":{"const":"pattern"},"row":{"type":"integer","minimum":0,"maximum":4}},"additionalProperties":false},
+      {"type":"object","required":["op","destination"],"properties":{"op":{"const":"place_tiles"},"destination":{"const":"floor"}},"additionalProperties":false}
+    ]}
+  ]}}},"oneOf":[
+    {"properties":{"mode":{"const":"enumerate_routes"}},"required":["mode","request"],"not":{"anyOf":[{"required":["steps"]},{"required":["programId"]}]}},
+    {"properties":{"mode":{"const":"commit"}},"required":["mode","programId","steps"],"not":{"required":["request"]}}
+  ],
+  "additionalProperties":false
+}

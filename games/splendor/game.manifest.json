@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 2,
+  "id": "splendor",
+  "title": "璀璨宝石",
+  "language": "javascript",
+  "aliases": [
+    "璀璨宝石",
+    "宝石",
+    "Splendor"
+  ],
+  "players": {
+    "min": 2,
+    "max": 4
+  },
+  "frontend": {
+    "entry": "index.html"
+  },
+  "rules": {
+    "path": "data/rules.md",
+    "sessionHeadPath": "data/session-head.md"
+  },
+  "skills": {
+    "path": "skills"
+  },
+  "semantic": {
+    "modelActions": "semantic/model-actions.json",
+    "engineMapping": "semantic/engine-mapping.json"
+  },
+  "commands": {},
+  "adapter": {
+    "protocolVersion": 2,
+    "snapshotVersion": 7,
+    "restoreVersions": [
+      5,
+      6,
+      7
+    ],
+    "script": "src/adapter/bglab-adapter.js",
+    "actionProfile": "splendor-v1",
+    "actionSchema": "data/action-chain.schema.json",
+    "capabilities": {
+      "atomicActionChain": true,
+      "decisionPrograms": "finite",
+      "informationModel": "seat_private",
+      "turnOrder": "sequential",
+      "chanceBeforeBoundary": "declared_boundary"
+    },
+    "authorityEnumeration": {
+      "maxNodes": 20000,
+      "maxTimeMs": 5000,
+      "pageSize": 12
+    }
+  },
+  "coverage": {
+    "actionFamilies": [
+      "take_gems",
+      "buy_card",
+      "reserve_card"
+    ],
+    "effectFamilies": [
+      "take_2",
+      "take_3",
+      "buy_card",
+      "reserve_card",
+      "noble_awarded",
+      "final_round_started",
+      "game_finished"
+    ],
+    "boundaryReasons": [
+      "turn_passed",
+      "game_finished",
+      "new_information"
+    ]
+  }
+}

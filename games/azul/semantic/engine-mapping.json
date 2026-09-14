@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "engine": "azul",
+  "mechanicalOps": [
+    "begin"
+  ],
+  "actionRoles": {},
+  "rules": [
+    {
+      "semanticAction": "draft_tiles",
+      "steps": [
+        {
+          "op": "select_source",
+          "capture": {
+            "source": "source",
+            "source_index": "factoryIndex"
+          }
+        },
+        {
+          "op": "select_color",
+          "capture": {
+            "color": "color"
+          }
+        }
+      ],
+      "defaults": {
+        "source_index": null
+      }
+    },
+    {
+      "semanticAction": "place_tiles",
+      "steps": [
+        {
+          "op": "place_tiles",
+          "capture": {
+            "destination": "destination",
+            "row": "row"
+          }
+        }
+      ],
+      "defaults": {
+        "row": null
+      }
+    }
+  ],
+  "outcomePresentation": "summary-v1",
+  "outcomeProjection": [
+    "selectedColor",
+    "selectedTileCount",
+    "patternPlacedTileCount",
+    "selectedTilesToFloorCount",
+    "destination",
+    "row",
+    "completedPatternLine",
+    "patternLineAfter",
+    "floorDelta",
+    "scoreDelta",
+    "scoreAfter",
+    "endsRound",
+    "roundScoreDelta",
+    "gameFinished",
+    "nextPlayer",
+    "phase",
+    "remaining"
+  ],
+  "outcomeRequirements": [
+    {
+      "when": {
+        "action": "place_tiles",
+        "arguments": {"destination": "pattern"}
+      },
+      "required": [
+        "patternPlacedTileCount",
+        "selectedTilesToFloorCount",
+        "patternLineAfter"
+      ]
+    }
+  ]
+}

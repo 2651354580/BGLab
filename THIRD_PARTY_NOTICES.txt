@@ -1,0 +1,10 @@
+Third-party notices
+===================
+
+The MIT license applies to BGLab source code. Third-party libraries retain
+their respective licenses; dependency metadata is recorded in pyproject.toml
+and the game package manifests and lock files.
+
+Board-game names, trademarks and artwork belong to their respective rights
+holders and are not relicensed under BGLab's MIT license. No additional
+rights to third-party content are granted by this repository.

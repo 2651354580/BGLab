@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 2,
+  "id": "azul",
+  "title": "花砖物语",
+  "language": "javascript",
+  "aliases": [
+    "花砖",
+    "花砖物语",
+    "Azul"
+  ],
+  "players": {
+    "min": 2,
+    "max": 4
+  },
+  "frontend": {
+    "entry": "index.html"
+  },
+  "rules": {
+    "path": "data/rules.md",
+    "sessionHeadPath": "data/session-head.md"
+  },
+  "skills": {
+    "path": "skills"
+  },
+  "hostRecovery": {
+    "preferredStep": {
+      "op": "place_tiles",
+      "destination": "pattern"
+    }
+  },
+  "semantic": {
+    "modelActions": "semantic/model-actions.json",
+    "engineMapping": "semantic/engine-mapping.json"
+  },
+  "commands": {},
+  "adapter": {
+    "protocolVersion": 2,
+    "snapshotVersion": 1,
+    "restoreVersions": [
+      1
+    ],
+    "script": "src/adapter/bglab-adapter.js",
+    "actionProfile": "azul-v1",
+    "actionSchema": "data/action-chain.schema.json",
+    "capabilities": {
+      "atomicActionChain": true,
+      "decisionPrograms": "finite",
+      "informationModel": "perfect",
+      "turnOrder": "sequential",
+      "chanceBeforeBoundary": "none"
+    },
+    "authorityEnumeration": {
+      "maxNodes": 20000,
+      "maxTimeMs": 5000,
+      "pageSize": 12
+    }
+  },
+  "coverage": {
+    "actionFamilies": [
+      "select_source",
+      "select_color",
+      "place_tiles"
+    ],
+    "effectFamilies": [
+      "TilesTaken",
+      "WallTilePlaced",
+      "RoundScored",
+      "FinalBonus",
+      "GameFinished",
+      "RoundStarted"
+    ],
+    "boundaryReasons": [
+      "turn_passed",
+      "game_finished"
+    ]
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "engine": "the-white-castle",
+  "toolSchema": "compact-flat",
+  "actions": [
+    {"name": "pass_turn", "description": "只有当前 DecisionFrame 明确允许时才能跳过当前决定。", "fields": {}},
+    {"name": "finish_action", "description": "结束当前可选行动链，并放弃尚未执行的全部已解锁行动；不能只因后缀未知就使用。", "fields": {}},
+    {
+      "name": "choose_starting_pair",
+      "description": "选择当前 Frame 列出的一个可用开局组合。",
+      "fields": {"offer": {"type": "integer", "minimum": 0, "description": "当前 Frame 中开局组合的 offer 编号；不是 commit.id。"}}
+    },
+    {
+      "name": "take_die",
+      "description": "选择当前桥上一个可取的端点骰子。",
+      "fields": {
+        "color": {"type": "string", "enum": ["black", "white", "coral"], "description": "所取骰子的颜色。"},
+        "side": {"type": "string", "enum": ["left", "right"], "description": "骰子当前所在桥端；left 或 right。"}
+      }
+    },
+    {
+      "name": "place_die_public",
+      "description": "把已选择的骰子放到一个当前可见的非城堡公共工位。",
+      "inheritedFields": ["color", "side"],
+      "fields": {"workspace": {"type": "string", "enum": ["well", "outside-left", "outside-right"], "description": "当前 Frame 中可用的水井或墙外工位。"}}
+    },
+    {
+      "name": "place_die_personal",
+      "description": "把已选择的骰子放到当前座位个人领地的一条可见队列。",
+      "inheritedFields": ["color", "side"],
+      "fields": {"row": {"type": "string", "enum": ["courtier", "gardener", "warrior"], "description": "个人领地队列；必须与当前骰色和 Frame 可用性一致。"}}
+    },
+    {
+      "name": "place_die_castle",
+      "description": "把已选择的骰子放入一个当前可见的城堡房间，只发送 floor 和 room。这里不发送 row；后续选择城堡卡牌行使用 choose_castle_row。每组城堡奖励前按 Frame 使用 action_order；选定组内的固定奖励由引擎自动结算。",
+      "inheritedFields": ["color", "side"],
+      "fields": {
+        "floor": {"type": "string", "enum": ["steward", "diplomat"], "description": "城堡楼层：steward=第一层地头，diplomat=第二层使节。"},
+        "room": {"type": "integer", "minimum": 1, "maximum": 3, "description": "该楼层内的房间编号：地头1–3，使节1–2；编号不是楼层数，以当前 Frame 为准。"}
+      }
+    },
+    {
+      "name": "deploy_gardener",
+      "description": "把一名领地中可用的园丁部署到当前可见的合法园地；具体棋子由游戏包选择。随后只按顺序写该园地在 Frame 中显示的下游选择（支付或跳过用 optional_payment；水井资源用 well_resource）。",
+      "fields": {"target": {"type": "string", "pattern": "^garden-(black|white|coral)-[12]$", "description": "当前 Frame 中可见的园地名称。"}}
+    },
+    {
+      "name": "deploy_warrior",
+      "description": "把一名领地中可用的武士部署到当前可见的合法训练场；具体棋子由游戏包选择。",
+      "fields": {"target": {"type": "string", "pattern": "^yard-[123]$", "description": "当前 Frame 中可见的训练场名称。"}}
+    },
+    {
+      "name": "recruit_courtier",
+      "description": "招募一名领地中的家臣到固定城门；只发送 action，不发送棋子、target、levels 或目的地 ID。除非当前 Frame 明确列出独立选择，抵达城门不会产生到达奖励或资源选择。",
+      "fields": {}
+    },
+    {
+      "name": "promote_courtier",
+      "description": "把一名符合条件的家臣晋升到当前 Frame 中的具体房间或 daimyo；指定目标与层数，同起始楼层的等价棋子由游戏包选择。",
+      "fields": {
+        "target": {
+          "type": "string",
+          "enum": ["steward-1", "steward-2", "steward-3", "diplomat-1", "diplomat-2", "daimyo"],
+          "description": "目标房间与 Frame 一致：steward-N=第一层地头的第N号房间，diplomat-N=第二层使节的第N号房间，daimyo=第三层大名；N是同层房间编号。不同房间奖励不同，不能只填楼层。绝不填写家臣、成员或棋子 ID。"
+        },
+        "levels": {"type": "integer", "minimum": 1, "maximum": 2, "description": "只用于 promote_courtier，表示晋升 1 或 2 层；recruit_courtier 不发送该字段。"}
+      }
+    },
+    {
+      "name": "exchange_seal",
+      "description": "只在 Frame 明确显示独立家纹兑换时使用；奖励中的支付分支改用 optional_payment。",
+      "fields": {"receive": {"type": "string", "enum": ["coins", "food", "iron", "pearl"], "description": "本次家纹兑换获得的资源。"}}
+    },
+    {
+      "name": "choose_castle_row",
+      "description": "使用楼层、房间和行号选择当前可见的一行城堡卡牌奖励。",
+      "fields": {
+        "floor": {"type": "string", "enum": ["steward", "diplomat"], "description": "城堡楼层：steward=第一层地头，diplomat=第二层使节。"},
+        "room": {"type": "integer", "minimum": 1, "maximum": 3, "description": "该楼层内的房间编号：地头1–3，使节1–2；编号不是楼层数，以当前 Frame 为准。"},
+        "row": {"type": "integer", "minimum": 1, "maximum": 3, "description": "当前 Frame 明确列出的卡牌奖励行号。"}
+      }
+    },
+    {
+      "name": "choose_reward",
+      "description": "结算触发动作之后由当前 Frame 明确显示的一项玩家选择。使用匹配的 kind 和从 0 开始的 choice；固定奖励不是动作。不能把开局、水井、其他路线或旧历史中的选择 kind 复制到没有开放该选择的步骤。",
+      "fields": {
+        "kind": {
+          "type": "string",
+          "description": "采用当前 Frame 标出的 kind：outside_action=墙外行动 N；action_order=每组城堡奖励前或其他奖励组的顺序选择（每组都会执行）；optional_payment=支付或跳过；influence_checkpoint=时间轨支付或停止；well_resource=水井资源选择；round_end_garden_order=轮末选择下一处待结算园地；garden_resource=轮末园地结算中标为此 kind 的资源选择；resource_choice=当前一般资源选择，也可能由园地触发；personal_row_choice=明确的个人队列选择。kind 由当前选择决定，不能只根据奖励来源猜名称。固定获得和固定灯笼效果不写 choose_reward。",
+          "enum": [
+            "optional_payment",
+            "well_resource",
+            "lantern",
+            "outside_action",
+            "daimyo_lantern",
+            "daimyo_reward",
+            "action_order",
+            "personal_row_choice",
+            "castle_action_order",
+            "arrival_reward",
+            "refresh_castle_room",
+            "starting_resource",
+            "round_end_garden_order",
+            "garden_resource",
+            "resource_choice",
+            "payment",
+            "effect_order",
+            "influence_checkpoint"
+          ]
+        },
+        "choice": {
+          "type": ["string", "integer", "null"],
+          "description": "从 0 开始的序号：Frame 显示的行动/奖励/资源 N 写成 N-1。标准资源为 0=food、1=iron、2=pearl。城堡卡牌行使用 choose_castle_row。"
+        }
+      }
+    }
+  ]
+}

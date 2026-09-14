@@ -1,0 +1,8 @@
+{
+  "schemaVersion":1,
+  "root":"assets/img",
+  "tiles":{"black":"black.svg","cyan":"cyan.svg","blue":"blue.svg","yellow":"yellow.svg","red":"red.svg","firstPlayer":"first-player.svg"},
+  "boards":["playerboard1.jpg","playerboard2.jpg","playerboard3.jpg","playerboard4.jpg"],
+  "factory":"factory.png",
+  "background":"background.webp"
+}

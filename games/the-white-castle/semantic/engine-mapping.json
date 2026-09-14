@@ -1,0 +1,242 @@
+{
+  "schemaVersion": 1,
+  "engine": "the-white-castle",
+  "mechanicalOps": ["begin", "finishMajorAction", "finishResolution"],
+  "actionRoles": {
+    "exchange_seal": "intent",
+    "finish_action": "intent",
+    "choose_castle_row": "choice",
+    "choose_reward": "choice"
+  },
+  "candidateDiversity": {
+    "collapseChoiceValuesForKinds": [
+      "resource_choice",
+      "well_resource",
+      "garden_resource",
+      "starting_resource"
+    ],
+    "ignoreActions": ["exchange_seal"]
+  },
+  "choiceValueLabels": {
+    "resource_choice": {"0": "food", "1": "iron", "2": "pearl"},
+    "well_resource": {"0": "food", "1": "iron", "2": "pearl"},
+    "garden_resource": {"0": "food", "1": "iron", "2": "pearl"},
+    "starting_resource": {"0": "food", "1": "iron", "2": "pearl"},
+    "optional_payment": {"0": "pay", "1": "skip"},
+    "influence_checkpoint": {"0": "pay", "1": "stop"}
+  },
+  "rules": [
+    {
+      "semanticAction": "pass_turn",
+      "steps": [
+        {"op": "begin", "where": {"action": "turn"}},
+        {"op": "finishResolution"}
+      ],
+      "defaults": {}
+    },
+    {
+      "semanticAction": "choose_starting_pair",
+      "steps": [{"op": "chooseStartingPair", "capture": {"offer": "offer"}}],
+      "defaults": {}
+    },
+    {
+      "semanticAction": "take_die",
+      "steps": [{"op": "draftDie", "capture": {"color": "bridge", "side": "end"}}],
+      "defaults": {}
+    },
+    {
+      "semanticAction": "place_die_public",
+      "steps": [{"op": "placeDie", "whereRegex": {"publicWorkspace": "^(?:well|outside-left|outside-right)$"}, "capture": {"workspace": "publicWorkspace"}}],
+      "defaults": {}
+    },
+    {
+      "semanticAction": "place_die_personal",
+      "steps": [{"op": "placeDie", "whereRegex": {"personalRow": "^(?:courtier|gardener|warrior)$"}, "capture": {"row": "personalRow"}}],
+      "defaults": {}
+    },
+    {
+      "semanticAction": "place_die_castle",
+      "steps": [{"op": "placeDie", "whereRegex": {"publicFloor": "^(?:steward|diplomat)$"}, "capture": {"floor": "publicFloor", "room": "publicRoom"}}],
+      "defaults": {}
+    },
+    {
+      "semanticAction": "deploy_gardener",
+      "steps": [
+        {"op": "beginMajorAction", "where": {"mode": "gardener"}},
+        {"op": "selectMajorActionSource"},
+        {"op": "selectMajorActionTarget", "capture": {"target": "target"}},
+        {"op": "confirmMajorAction"}
+      ],
+      "defaults": {}
+    },
+    {
+      "semanticAction": "deploy_warrior",
+      "steps": [
+        {"op": "beginMajorAction", "where": {"mode": "warrior"}},
+        {"op": "selectMajorActionSource"},
+        {"op": "selectMajorActionTarget", "capture": {"target": "target"}},
+        {"op": "confirmMajorAction"}
+      ],
+      "defaults": {}
+    },
+    {
+      "semanticAction": "recruit_courtier",
+      "steps": [
+        {"op": "beginMajorAction", "where": {"mode": "recruit"}},
+        {"op": "selectMajorActionSource"},
+        {"op": "selectMajorActionTarget", "where": {"target": "gate"}},
+        {"op": "confirmMajorAction"}
+      ],
+      "defaults": {}
+    },
+    {
+      "semanticAction": "promote_courtier",
+      "steps": [
+        {"op": "beginMajorAction", "where": {"mode": "promote"}},
+        {"op": "selectMajorActionSource"},
+        {"op": "selectMajorActionTarget", "capture": {"target": "target", "levels": "levels"}},
+        {"op": "confirmMajorAction"}
+      ],
+      "defaults": {}
+    },
+    {
+      "semanticAction": "exchange_seal",
+      "steps": [{"op": "exchangeSeal", "capture": {"receive": "receive"}}],
+      "defaults": {}
+    },
+    {
+      "semanticAction": "finish_action",
+      "steps": [{"op": "finishMajorAction"}],
+      "defaults": {}
+    },
+    {
+      "semanticAction": "choose_reward",
+      "steps": [{"op": "chooseEffectOption", "effectType": "pay", "capture": {"choice": "option"}}],
+      "defaults": {"kind": "optional_payment"}
+    },
+    {
+      "semanticAction": "choose_reward",
+      "steps": [{"op": "chooseEffectOption", "effectType": "influence", "capture": {"choice": "option"}}],
+      "defaults": {"kind": "influence_checkpoint"}
+    },
+    {
+      "semanticAction": "choose_reward",
+      "steps": [{"op": "chooseEffectOption", "effectType": "actionOrder", "capture": {"choice": "option"}}],
+      "defaults": {"kind": "action_order"}
+    },
+    {
+      "semanticAction": "choose_reward",
+      "steps": [{"op": "chooseEffectOption", "effectType": "domainAction", "capture": {"choice": "option"}}],
+      "defaults": {"kind": "personal_row_choice"}
+    },
+    {
+      "semanticAction": "choose_castle_row",
+      "steps": [
+        {
+          "op": "selectCastleTileAction",
+          "whereRegex": {"publicFloor": "^(?:steward|diplomat)$"},
+          "capture": {"floor": "publicFloor", "room": "publicRoom", "row": "row"}
+        }
+      ],
+      "defaults": {}
+    },
+    {
+      "semanticAction": "choose_reward",
+      "steps": [{"op": "refreshCastleRoom", "capture": {"choice": "room"}}],
+      "defaults": {"kind": "refresh_castle_room"}
+    },
+    {
+      "semanticAction": "choose_reward",
+      "steps": [{"op": "chooseEffectOption", "whereRegex": {"effectId": "^setup-p[0-9]+-resources$"}, "capture": {"choice": "option"}}],
+      "defaults": {"kind": "starting_resource"}
+    },
+    {
+      "semanticAction": "choose_reward",
+      "steps": [{"op": "chooseEffectOption", "whereRegex": {"effectId": "^daimyo-lantern-.*$"}, "capture": {"choice": "option"}}],
+      "defaults": {"kind": "daimyo_lantern"}
+    },
+    {
+      "semanticAction": "choose_reward",
+      "steps": [{"op": "chooseEffectOption", "whereRegex": {"effectId": "^(?:turn-[0-9]+-)?lantern-.*$"}, "capture": {"choice": "option"}}],
+      "defaults": {"kind": "lantern"}
+    },
+    {
+      "semanticAction": "choose_reward",
+      "steps": [{"op": "chooseEffectOption", "whereRegex": {"effectId": "^daimyo-reward-.*$"}, "capture": {"choice": "option"}}],
+      "defaults": {"kind": "daimyo_reward"}
+    },
+    {
+      "semanticAction": "choose_reward",
+      "steps": [{"op": "chooseEffectOption", "whereRegex": {"effectId": "^round-.*-gardens-p[0-9]+(?:-remaining)*$"}, "capture": {"choice": "option"}}],
+      "defaults": {"kind": "round_end_garden_order"}
+    },
+    {
+      "semanticAction": "choose_reward",
+      "steps": [{"op": "chooseEffectOption", "whereRegex": {"effectId": "^round-.*-gardens-p[0-9]+(?:-remaining)*-garden-.*-[0-9]+$"}, "capture": {"choice": "option"}}],
+      "defaults": {"kind": "garden_resource"}
+    },
+    {
+      "semanticAction": "choose_reward",
+      "steps": [{"op": "chooseEffectOption", "whereRegex": {"effectId": "^(?:turn-[0-9]+-)?well-.*$"}, "capture": {"choice": "option"}}],
+      "defaults": {"kind": "well_resource"}
+    },
+    {
+      "semanticAction": "choose_reward",
+      "steps": [{"op": "chooseEffectOption", "whereRegex": {"effectId": "^arrival-.*$"}, "capture": {"choice": "option"}}],
+      "defaults": {"kind": "arrival_reward"}
+    },
+    {
+      "semanticAction": "choose_reward",
+      "steps": [{"op": "chooseEffectOption", "effectType": "gainChoice", "capture": {"choice": "option"}}],
+      "defaults": {"kind": "resource_choice"}
+    },
+    {
+      "semanticAction": "choose_reward",
+      "steps": [{"op": "chooseEffectOption", "whereRegex": {"effectId": "^pay-.*$"}, "capture": {"choice": "option"}}],
+      "defaults": {"kind": "payment"}
+    },
+    {
+      "semanticAction": "choose_reward",
+      "steps": [{"op": "chooseEffectOption", "whereRegex": {"effectId": "^turn-[0-9]+-p[0-9]+-domain-warrior-[0-9]+(?:-after-[0-9]+)*$"}, "capture": {"choice": "option"}}],
+      "defaults": {"kind": "influence_checkpoint"}
+    },
+    {
+      "semanticAction": "choose_reward",
+      "steps": [{"op": "chooseEffectOption", "whereRegex": {"effectId": "^(?:ordered(?:-remaining-order)*|threshold|first-[0-9]+|second-[0-9]+)$"}, "capture": {"choice": "option"}}],
+      "defaults": {"kind": "effect_order"}
+    },
+    {
+      "semanticAction": "choose_reward",
+      "steps": [{"op": "chooseEffectOption", "whereRegex": {"effectId": "^turn-.*-castle-.*-actions$"}, "capture": {"choice": "option"}}],
+      "defaults": {"kind": "castle_action_order"}
+    },
+    {
+      "semanticAction": "choose_reward",
+      "steps": [{"op": "chooseEffectOption", "whereRegex": {"effectId": "^turn-[0-9]+-outside-.*$"}, "capture": {"choice": "option"}}],
+      "defaults": {"kind": "outside_action"}
+    },
+    {
+      "semanticAction": "choose_reward",
+      "steps": [{"op": "chooseEffectOption", "whereRegex": {"effectId": "^(?:pay|.*-reward-[0-9]+|turn-.*-castle-.*-actions-selected-.*)$"}, "capture": {"choice": "option"}}],
+      "defaults": {"kind": "optional_payment"}
+    },
+    {
+      "semanticAction": "choose_reward",
+      "steps": [{"op": "chooseEffectOption", "whereRegex": {"effectId": "^turn-[0-9]+-p[0-9]+-domain-gardener-[0-9]+$"}, "capture": {"choice": "option"}}],
+      "defaults": {"kind": "optional_payment"}
+    }
+  ],
+  "outcomePresentation": "summary-v1",
+  "outcomeProjection": [
+    "foodDelta", "ironDelta", "pearlDelta", "sealsDelta", "influenceDelta",
+    "scoreDelta", "scoreAfter", "immediateScoreDelta", "endNowScoreDelta", "factualCosts", "factualGains", "structuralBenefits",
+    "remaining.resources", "remaining.influence", "scoreIfGameEnded.after",
+    "finishActionEndedChain", "unexecutedActionAbandoned", "endedMajorAction", "nextPlayer", "phase"
+  ],
+  "outcomeRequirements": [
+    {
+      "when": {"action": "finish_action"},
+      "required": ["finishActionEndedChain", "unexecutedActionAbandoned"]
+    }
+  ]
+}

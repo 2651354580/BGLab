@@ -1,0 +1,2518 @@
+{
+  "schemaVersion": 1,
+  "game": {
+    "id": "the-white-castle",
+    "title": "The White Castle / 姬路城"
+  },
+  "resources": [
+    {
+      "id": "coins",
+      "label": "coins"
+    },
+    {
+      "id": "seals",
+      "label": "seals"
+    },
+    {
+      "id": "food",
+      "label": "food"
+    },
+    {
+      "id": "iron",
+      "label": "iron"
+    },
+    {
+      "id": "pearl",
+      "label": "pearl"
+    },
+    {
+      "id": "points",
+      "label": "points"
+    },
+    {
+      "id": "influence",
+      "label": "influence"
+    }
+  ],
+  "components": [
+    {
+      "id": "die-tile-reward-1",
+      "type": "die-tile-reward",
+      "effect": {
+        "type": "gain",
+        "resource": "coins",
+        "amount": 1
+      },
+      "assetRequired": false
+    },
+    {
+      "id": "die-tile-reward-2",
+      "type": "die-tile-reward",
+      "effect": {
+        "type": "choiceResource",
+        "amount": 1
+      },
+      "assetRequired": false
+    },
+    {
+      "id": "die-tile-reward-3",
+      "type": "die-tile-reward",
+      "effect": {
+        "type": "gain",
+        "resource": "food",
+        "amount": 1
+      },
+      "assetRequired": false
+    },
+    {
+      "id": "die-tile-reward-4",
+      "type": "die-tile-reward",
+      "effect": {
+        "type": "gain",
+        "resource": "pearl",
+        "amount": 1
+      },
+      "assetRequired": false
+    },
+    {
+      "id": "die-tile-reward-5",
+      "type": "die-tile-reward",
+      "effect": {
+        "type": "gain",
+        "resource": "iron",
+        "amount": 1
+      },
+      "assetRequired": false
+    },
+    {
+      "id": "yard-tile-1",
+      "numericId": 1,
+      "type": "yard-tile",
+      "blueAction": {
+        "type": "majorAction",
+        "action": "courtier"
+      },
+      "goldAction": {
+        "type": "gain",
+        "resource": "pearl",
+        "amount": 3
+      },
+      "assetRequired": true
+    },
+    {
+      "id": "yard-tile-2",
+      "numericId": 2,
+      "type": "yard-tile",
+      "blueAction": {
+        "type": "majorAction",
+        "action": "warrior"
+      },
+      "goldAction": {
+        "type": "gain",
+        "resource": "influence",
+        "amount": 2
+      },
+      "assetRequired": true
+    },
+    {
+      "id": "yard-tile-3",
+      "numericId": 3,
+      "type": "yard-tile",
+      "blueAction": {
+        "type": "majorAction",
+        "action": "gardener"
+      },
+      "goldAction": {
+        "type": "gain",
+        "resource": "food",
+        "amount": 3
+      },
+      "assetRequired": true
+    },
+    {
+      "id": "yard-tile-4",
+      "numericId": 4,
+      "type": "yard-tile",
+      "blueAction": {
+        "type": "castleTile",
+        "color": "coral"
+      },
+      "goldAction": {
+        "type": "well"
+      },
+      "assetRequired": true
+    },
+    {
+      "id": "yard-tile-5",
+      "numericId": 5,
+      "type": "yard-tile",
+      "blueAction": {
+        "type": "castleTile",
+        "color": "white"
+      },
+      "goldAction": {
+        "type": "gain",
+        "resource": "seals",
+        "amount": 2
+      },
+      "assetRequired": true
+    },
+    {
+      "id": "yard-tile-6",
+      "numericId": 6,
+      "type": "yard-tile",
+      "blueAction": {
+        "type": "castleTile",
+        "color": "black"
+      },
+      "goldAction": {
+        "type": "gain",
+        "resource": "coins",
+        "amount": 5
+      },
+      "assetRequired": true
+    },
+    {
+      "id": "yard-tile-7",
+      "numericId": 7,
+      "type": "yard-tile",
+      "blueAction": {
+        "type": "castleTile",
+        "color": "any"
+      },
+      "goldAction": {
+        "type": "castleTile",
+        "color": "light"
+      },
+      "assetRequired": true
+    },
+    {
+      "id": "yard-tile-8",
+      "numericId": 8,
+      "type": "yard-tile",
+      "blueAction": {
+        "type": "domain"
+      },
+      "goldAction": {
+        "type": "gain",
+        "resource": "points",
+        "amount": 2
+      },
+      "assetRequired": true
+    }
+  ],
+  "cards": [
+    {
+      "id": "steward-card-1",
+      "numericId": 1,
+      "kind": "steward",
+      "excludedAtTwoPlayers": true,
+      "source": {
+        "type": "component-image",
+        "assetId": "steward-card-1-face"
+      },
+      "rows": [
+        {
+          "id": "steward-card-1-row-top",
+          "position": "top",
+          "tone": "dark",
+          "printed": [
+            "pay:seals:1->major-action:courtier"
+          ],
+          "effects": [
+            {
+              "type": "pay",
+              "resource": "seals",
+              "amount": 1,
+              "then": [
+                {
+                  "type": "majorAction",
+                  "action": "courtier"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "steward-card-1-row-middle",
+          "position": "middle",
+          "tone": "light",
+          "printed": [
+            "gain:seals:1",
+            "gain:points:1"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "seals",
+              "amount": 1
+            },
+            {
+              "type": "gain",
+              "resource": "points",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "steward-card-1-row-bottom",
+          "position": "bottom",
+          "tone": "light",
+          "printed": [
+            "gain:food:1",
+            "lantern"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "food",
+              "amount": 1
+            },
+            {
+              "type": "lantern"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "steward-card-2",
+      "numericId": 2,
+      "kind": "steward",
+      "excludedAtTwoPlayers": false,
+      "source": {
+        "type": "component-image",
+        "assetId": "steward-card-2-face"
+      },
+      "rows": [
+        {
+          "id": "steward-card-2-row-top",
+          "position": "top",
+          "tone": "dark",
+          "printed": [
+            "pay:seals:1->major-action:courtier"
+          ],
+          "effects": [
+            {
+              "type": "pay",
+              "resource": "seals",
+              "amount": 1,
+              "then": [
+                {
+                  "type": "majorAction",
+                  "action": "courtier"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "steward-card-2-row-middle",
+          "position": "middle",
+          "tone": "light",
+          "printed": [
+            "gain:influence:1"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "influence",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "steward-card-2-row-bottom",
+          "position": "bottom",
+          "tone": "light",
+          "printed": [
+            "gain:iron:2"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "iron",
+              "amount": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "steward-card-3",
+      "numericId": 3,
+      "kind": "steward",
+      "excludedAtTwoPlayers": true,
+      "source": {
+        "type": "component-image",
+        "assetId": "steward-card-3-face"
+      },
+      "rows": [
+        {
+          "id": "steward-card-3-row-top",
+          "position": "top",
+          "tone": "dark",
+          "printed": [
+            "pay:seals:1->major-action:courtier"
+          ],
+          "effects": [
+            {
+              "type": "pay",
+              "resource": "seals",
+              "amount": 1,
+              "then": [
+                {
+                  "type": "majorAction",
+                  "action": "courtier"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "steward-card-3-row-middle",
+          "position": "middle",
+          "tone": "light",
+          "printed": [
+            "lantern"
+          ],
+          "effects": [
+            {
+              "type": "lantern"
+            }
+          ]
+        },
+        {
+          "id": "steward-card-3-row-bottom",
+          "position": "bottom",
+          "tone": "light",
+          "printed": [
+            "gain:points:2"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "points",
+              "amount": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "steward-card-4",
+      "numericId": 4,
+      "kind": "steward",
+      "excludedAtTwoPlayers": false,
+      "source": {
+        "type": "component-image",
+        "assetId": "steward-card-4-face"
+      },
+      "rows": [
+        {
+          "id": "steward-card-4-row-top",
+          "position": "top",
+          "tone": "dark",
+          "printed": [
+            "pay:seals:1->major-action:warrior"
+          ],
+          "effects": [
+            {
+              "type": "pay",
+              "resource": "seals",
+              "amount": 1,
+              "then": [
+                {
+                  "type": "majorAction",
+                  "action": "warrior"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "steward-card-4-row-middle",
+          "position": "middle",
+          "tone": "light",
+          "printed": [
+            "gain:coins:1",
+            "well"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "coins",
+              "amount": 1
+            },
+            {
+              "type": "well"
+            }
+          ]
+        },
+        {
+          "id": "steward-card-4-row-bottom",
+          "position": "bottom",
+          "tone": "light",
+          "printed": [
+            "lantern"
+          ],
+          "effects": [
+            {
+              "type": "lantern"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "steward-card-5",
+      "numericId": 5,
+      "kind": "steward",
+      "excludedAtTwoPlayers": false,
+      "source": {
+        "type": "component-image",
+        "assetId": "steward-card-5-face"
+      },
+      "rows": [
+        {
+          "id": "steward-card-5-row-top",
+          "position": "top",
+          "tone": "dark",
+          "printed": [
+            "pay:seals:1->major-action:warrior"
+          ],
+          "effects": [
+            {
+              "type": "pay",
+              "resource": "seals",
+              "amount": 1,
+              "then": [
+                {
+                  "type": "majorAction",
+                  "action": "warrior"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "steward-card-5-row-middle",
+          "position": "middle",
+          "tone": "light",
+          "printed": [
+            "gain:food:1",
+            "gain:pearl:1"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "food",
+              "amount": 1
+            },
+            {
+              "type": "gain",
+              "resource": "pearl",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "steward-card-5-row-bottom",
+          "position": "bottom",
+          "tone": "light",
+          "printed": [
+            "gain:iron:1",
+            "lantern"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "iron",
+              "amount": 1
+            },
+            {
+              "type": "lantern"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "steward-card-6",
+      "numericId": 6,
+      "kind": "steward",
+      "excludedAtTwoPlayers": true,
+      "source": {
+        "type": "component-image",
+        "assetId": "steward-card-6-face"
+      },
+      "rows": [
+        {
+          "id": "steward-card-6-row-top",
+          "position": "top",
+          "tone": "light",
+          "printed": [
+            "gain:iron:1",
+            "lantern"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "iron",
+              "amount": 1
+            },
+            {
+              "type": "lantern"
+            }
+          ]
+        },
+        {
+          "id": "steward-card-6-row-middle",
+          "position": "middle",
+          "tone": "dark",
+          "printed": [
+            "pay:seals:1->major-action:gardener"
+          ],
+          "effects": [
+            {
+              "type": "pay",
+              "resource": "seals",
+              "amount": 1,
+              "then": [
+                {
+                  "type": "majorAction",
+                  "action": "gardener"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "steward-card-6-row-bottom",
+          "position": "bottom",
+          "tone": "light",
+          "printed": [
+            "choose-resource:2"
+          ],
+          "effects": [
+            {
+              "type": "choiceResource",
+              "amount": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "steward-card-7",
+      "numericId": 7,
+      "kind": "steward",
+      "excludedAtTwoPlayers": false,
+      "source": {
+        "type": "component-image",
+        "assetId": "steward-card-7-face"
+      },
+      "rows": [
+        {
+          "id": "steward-card-7-row-top",
+          "position": "top",
+          "tone": "light",
+          "printed": [
+            "gain:influence:1"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "influence",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "steward-card-7-row-middle",
+          "position": "middle",
+          "tone": "dark",
+          "printed": [
+            "pay:seals:1->major-action:gardener"
+          ],
+          "effects": [
+            {
+              "type": "pay",
+              "resource": "seals",
+              "amount": 1,
+              "then": [
+                {
+                  "type": "majorAction",
+                  "action": "gardener"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "steward-card-7-row-bottom",
+          "position": "bottom",
+          "tone": "light",
+          "printed": [
+            "gain:food:2"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "food",
+              "amount": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "steward-card-8",
+      "numericId": 8,
+      "kind": "steward",
+      "excludedAtTwoPlayers": true,
+      "source": {
+        "type": "component-image",
+        "assetId": "steward-card-8-face"
+      },
+      "rows": [
+        {
+          "id": "steward-card-8-row-top",
+          "position": "top",
+          "tone": "light",
+          "printed": [
+            "gain:coins:1",
+            "well"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "coins",
+              "amount": 1
+            },
+            {
+              "type": "well"
+            }
+          ]
+        },
+        {
+          "id": "steward-card-8-row-middle",
+          "position": "middle",
+          "tone": "dark",
+          "printed": [
+            "pay:seals:1->major-action:gardener"
+          ],
+          "effects": [
+            {
+              "type": "pay",
+              "resource": "seals",
+              "amount": 1,
+              "then": [
+                {
+                  "type": "majorAction",
+                  "action": "gardener"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "steward-card-8-row-bottom",
+          "position": "bottom",
+          "tone": "light",
+          "printed": [
+            "gain:influence:1"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "influence",
+              "amount": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "steward-card-9",
+      "numericId": 9,
+      "kind": "steward",
+      "excludedAtTwoPlayers": false,
+      "source": {
+        "type": "component-image",
+        "assetId": "steward-card-9-face"
+      },
+      "rows": [
+        {
+          "id": "steward-card-9-row-top",
+          "position": "top",
+          "tone": "light",
+          "printed": [
+            "gain:coins:1",
+            "well"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "coins",
+              "amount": 1
+            },
+            {
+              "type": "well"
+            }
+          ]
+        },
+        {
+          "id": "steward-card-9-row-middle",
+          "position": "middle",
+          "tone": "dark",
+          "printed": [
+            "pay:seals:1->major-action:courtier"
+          ],
+          "effects": [
+            {
+              "type": "pay",
+              "resource": "seals",
+              "amount": 1,
+              "then": [
+                {
+                  "type": "majorAction",
+                  "action": "courtier"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "steward-card-9-row-bottom",
+          "position": "bottom",
+          "tone": "light",
+          "printed": [
+            "gain:food:2"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "food",
+              "amount": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "steward-card-10",
+      "numericId": 10,
+      "kind": "steward",
+      "excludedAtTwoPlayers": false,
+      "source": {
+        "type": "component-image",
+        "assetId": "steward-card-10-face"
+      },
+      "rows": [
+        {
+          "id": "steward-card-10-row-top",
+          "position": "top",
+          "tone": "light",
+          "printed": [
+            "gain:seals:1",
+            "choose-resource:1"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "seals",
+              "amount": 1
+            },
+            {
+              "type": "choiceResource",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "steward-card-10-row-middle",
+          "position": "middle",
+          "tone": "dark",
+          "printed": [
+            "pay:seals:1->major-action:courtier"
+          ],
+          "effects": [
+            {
+              "type": "pay",
+              "resource": "seals",
+              "amount": 1,
+              "then": [
+                {
+                  "type": "majorAction",
+                  "action": "courtier"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "steward-card-10-row-bottom",
+          "position": "bottom",
+          "tone": "light",
+          "printed": [
+            "gain:iron:1",
+            "gain:food:1"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "iron",
+              "amount": 1
+            },
+            {
+              "type": "gain",
+              "resource": "food",
+              "amount": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "steward-card-11",
+      "numericId": 11,
+      "kind": "steward",
+      "excludedAtTwoPlayers": true,
+      "source": {
+        "type": "component-image",
+        "assetId": "steward-card-11-face"
+      },
+      "rows": [
+        {
+          "id": "steward-card-11-row-top",
+          "position": "top",
+          "tone": "light",
+          "printed": [
+            "choose-resource:2"
+          ],
+          "effects": [
+            {
+              "type": "choiceResource",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "steward-card-11-row-middle",
+          "position": "middle",
+          "tone": "light",
+          "printed": [
+            "gain:pearl:1",
+            "lantern"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "pearl",
+              "amount": 1
+            },
+            {
+              "type": "lantern"
+            }
+          ]
+        },
+        {
+          "id": "steward-card-11-row-bottom",
+          "position": "bottom",
+          "tone": "dark",
+          "printed": [
+            "pay:seals:1->major-action:warrior"
+          ],
+          "effects": [
+            {
+              "type": "pay",
+              "resource": "seals",
+              "amount": 1,
+              "then": [
+                {
+                  "type": "majorAction",
+                  "action": "warrior"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "steward-card-12",
+      "numericId": 12,
+      "kind": "steward",
+      "excludedAtTwoPlayers": false,
+      "source": {
+        "type": "component-image",
+        "assetId": "steward-card-12-face"
+      },
+      "rows": [
+        {
+          "id": "steward-card-12-row-top",
+          "position": "top",
+          "tone": "light",
+          "printed": [
+            "gain:pearl:2"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "pearl",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "steward-card-12-row-middle",
+          "position": "middle",
+          "tone": "light",
+          "printed": [
+            "gain:seals:1",
+            "gain:points:1"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "seals",
+              "amount": 1
+            },
+            {
+              "type": "gain",
+              "resource": "points",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "steward-card-12-row-bottom",
+          "position": "bottom",
+          "tone": "dark",
+          "printed": [
+            "pay:seals:1->major-action:gardener"
+          ],
+          "effects": [
+            {
+              "type": "pay",
+              "resource": "seals",
+              "amount": 1,
+              "then": [
+                {
+                  "type": "majorAction",
+                  "action": "gardener"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "steward-card-13",
+      "numericId": 13,
+      "kind": "steward",
+      "excludedAtTwoPlayers": false,
+      "source": {
+        "type": "component-image",
+        "assetId": "steward-card-13-face"
+      },
+      "rows": [
+        {
+          "id": "steward-card-13-row-top",
+          "position": "top",
+          "tone": "light",
+          "printed": [
+            "gain:iron:2"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "iron",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "steward-card-13-row-middle",
+          "position": "middle",
+          "tone": "light",
+          "printed": [
+            "lantern"
+          ],
+          "effects": [
+            {
+              "type": "lantern"
+            }
+          ]
+        },
+        {
+          "id": "steward-card-13-row-bottom",
+          "position": "bottom",
+          "tone": "dark",
+          "printed": [
+            "pay:seals:1->major-action:gardener"
+          ],
+          "effects": [
+            {
+              "type": "pay",
+              "resource": "seals",
+              "amount": 1,
+              "then": [
+                {
+                  "type": "majorAction",
+                  "action": "gardener"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "steward-card-14",
+      "numericId": 14,
+      "kind": "steward",
+      "excludedAtTwoPlayers": true,
+      "source": {
+        "type": "component-image",
+        "assetId": "steward-card-14-face"
+      },
+      "rows": [
+        {
+          "id": "steward-card-14-row-top",
+          "position": "top",
+          "tone": "light",
+          "printed": [
+            "gain:points:2"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "points",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "steward-card-14-row-middle",
+          "position": "middle",
+          "tone": "light",
+          "printed": [
+            "gain:seals:1",
+            "choose-resource:1"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "seals",
+              "amount": 1
+            },
+            {
+              "type": "choiceResource",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "steward-card-14-row-bottom",
+          "position": "bottom",
+          "tone": "dark",
+          "printed": [
+            "pay:seals:1->major-action:warrior"
+          ],
+          "effects": [
+            {
+              "type": "pay",
+              "resource": "seals",
+              "amount": 1,
+              "then": [
+                {
+                  "type": "majorAction",
+                  "action": "warrior"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "steward-card-15",
+      "numericId": 15,
+      "kind": "steward",
+      "excludedAtTwoPlayers": false,
+      "source": {
+        "type": "component-image",
+        "assetId": "steward-card-15-face"
+      },
+      "rows": [
+        {
+          "id": "steward-card-15-row-top",
+          "position": "top",
+          "tone": "light",
+          "printed": [
+            "gain:influence:1"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "influence",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "steward-card-15-row-middle",
+          "position": "middle",
+          "tone": "light",
+          "printed": [
+            "gain:pearl:2"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "pearl",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "steward-card-15-row-bottom",
+          "position": "bottom",
+          "tone": "dark",
+          "printed": [
+            "pay:seals:1->major-action:warrior"
+          ],
+          "effects": [
+            {
+              "type": "pay",
+              "resource": "seals",
+              "amount": 1,
+              "then": [
+                {
+                  "type": "majorAction",
+                  "action": "warrior"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "diplomat-card-1",
+      "numericId": 1,
+      "kind": "diplomat",
+      "excludedAtTwoPlayers": true,
+      "source": {
+        "type": "component-image",
+        "assetId": "diplomat-card-1-face"
+      },
+      "rows": [
+        {
+          "id": "diplomat-card-1-row-top",
+          "position": "top",
+          "tone": "dark",
+          "printed": [
+            "major-action:courtier"
+          ],
+          "effects": [
+            {
+              "type": "majorAction",
+              "action": "courtier"
+            }
+          ]
+        },
+        {
+          "id": "diplomat-card-1-row-bottom",
+          "position": "bottom",
+          "tone": "light",
+          "printed": [
+            "choose-resource:3"
+          ],
+          "effects": [
+            {
+              "type": "choiceResource",
+              "amount": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "diplomat-card-2",
+      "numericId": 2,
+      "kind": "diplomat",
+      "excludedAtTwoPlayers": false,
+      "source": {
+        "type": "component-image",
+        "assetId": "diplomat-card-2-face"
+      },
+      "rows": [
+        {
+          "id": "diplomat-card-2-row-top",
+          "position": "top",
+          "tone": "dark",
+          "printed": [
+            "major-action:courtier"
+          ],
+          "effects": [
+            {
+              "type": "majorAction",
+              "action": "courtier"
+            }
+          ]
+        },
+        {
+          "id": "diplomat-card-2-row-bottom",
+          "position": "bottom",
+          "tone": "light",
+          "printed": [
+            "gain:influence:2"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "influence",
+              "amount": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "diplomat-card-3",
+      "numericId": 3,
+      "kind": "diplomat",
+      "excludedAtTwoPlayers": false,
+      "source": {
+        "type": "component-image",
+        "assetId": "diplomat-card-3-face"
+      },
+      "rows": [
+        {
+          "id": "diplomat-card-3-row-top",
+          "position": "top",
+          "tone": "dark",
+          "printed": [
+            "major-action:courtier"
+          ],
+          "effects": [
+            {
+              "type": "majorAction",
+              "action": "courtier"
+            }
+          ]
+        },
+        {
+          "id": "diplomat-card-3-row-bottom",
+          "position": "bottom",
+          "tone": "light",
+          "printed": [
+            "gain:points:2",
+            "well"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "points",
+              "amount": 2
+            },
+            {
+              "type": "well"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "diplomat-card-4",
+      "numericId": 4,
+      "kind": "diplomat",
+      "excludedAtTwoPlayers": false,
+      "source": {
+        "type": "component-image",
+        "assetId": "diplomat-card-4-face"
+      },
+      "rows": [
+        {
+          "id": "diplomat-card-4-row-top",
+          "position": "top",
+          "tone": "dark",
+          "printed": [
+            "major-action:courtier"
+          ],
+          "effects": [
+            {
+              "type": "majorAction",
+              "action": "courtier"
+            }
+          ]
+        },
+        {
+          "id": "diplomat-card-4-row-bottom",
+          "position": "bottom",
+          "tone": "light",
+          "printed": [
+            "gain:seals:1",
+            "lantern"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "seals",
+              "amount": 1
+            },
+            {
+              "type": "lantern"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "diplomat-card-5",
+      "numericId": 5,
+      "kind": "diplomat",
+      "excludedAtTwoPlayers": false,
+      "source": {
+        "type": "component-image",
+        "assetId": "diplomat-card-5-face"
+      },
+      "rows": [
+        {
+          "id": "diplomat-card-5-row-top",
+          "position": "top",
+          "tone": "dark",
+          "printed": [
+            "major-action:warrior"
+          ],
+          "effects": [
+            {
+              "type": "majorAction",
+              "action": "warrior"
+            }
+          ]
+        },
+        {
+          "id": "diplomat-card-5-row-bottom",
+          "position": "bottom",
+          "tone": "light",
+          "printed": [
+            "choose-resource:3"
+          ],
+          "effects": [
+            {
+              "type": "choiceResource",
+              "amount": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "diplomat-card-6",
+      "numericId": 6,
+      "kind": "diplomat",
+      "excludedAtTwoPlayers": false,
+      "source": {
+        "type": "component-image",
+        "assetId": "diplomat-card-6-face"
+      },
+      "rows": [
+        {
+          "id": "diplomat-card-6-row-top",
+          "position": "top",
+          "tone": "dark",
+          "printed": [
+            "major-action:warrior"
+          ],
+          "effects": [
+            {
+              "type": "majorAction",
+              "action": "warrior"
+            }
+          ]
+        },
+        {
+          "id": "diplomat-card-6-row-bottom",
+          "position": "bottom",
+          "tone": "light",
+          "printed": [
+            "gain:influence:2"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "influence",
+              "amount": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "diplomat-card-7",
+      "numericId": 7,
+      "kind": "diplomat",
+      "excludedAtTwoPlayers": false,
+      "source": {
+        "type": "component-image",
+        "assetId": "diplomat-card-7-face"
+      },
+      "rows": [
+        {
+          "id": "diplomat-card-7-row-top",
+          "position": "top",
+          "tone": "light",
+          "printed": [
+            "gain:influence:2"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "influence",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "diplomat-card-7-row-bottom",
+          "position": "bottom",
+          "tone": "dark",
+          "printed": [
+            "major-action:gardener"
+          ],
+          "effects": [
+            {
+              "type": "majorAction",
+              "action": "gardener"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "diplomat-card-8",
+      "numericId": 8,
+      "kind": "diplomat",
+      "excludedAtTwoPlayers": false,
+      "source": {
+        "type": "component-image",
+        "assetId": "diplomat-card-8-face"
+      },
+      "rows": [
+        {
+          "id": "diplomat-card-8-row-top",
+          "position": "top",
+          "tone": "light",
+          "printed": [
+            "gain:points:2",
+            "well"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "points",
+              "amount": 2
+            },
+            {
+              "type": "well"
+            }
+          ]
+        },
+        {
+          "id": "diplomat-card-8-row-bottom",
+          "position": "bottom",
+          "tone": "dark",
+          "printed": [
+            "major-action:gardener"
+          ],
+          "effects": [
+            {
+              "type": "majorAction",
+              "action": "gardener"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "diplomat-card-9",
+      "numericId": 9,
+      "kind": "diplomat",
+      "excludedAtTwoPlayers": true,
+      "source": {
+        "type": "component-image",
+        "assetId": "diplomat-card-9-face"
+      },
+      "rows": [
+        {
+          "id": "diplomat-card-9-row-top",
+          "position": "top",
+          "tone": "light",
+          "printed": [
+            "gain:points:2",
+            "well"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "points",
+              "amount": 2
+            },
+            {
+              "type": "well"
+            }
+          ]
+        },
+        {
+          "id": "diplomat-card-9-row-bottom",
+          "position": "bottom",
+          "tone": "dark",
+          "printed": [
+            "major-action:warrior"
+          ],
+          "effects": [
+            {
+              "type": "majorAction",
+              "action": "warrior"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "diplomat-card-10",
+      "numericId": 10,
+      "kind": "diplomat",
+      "excludedAtTwoPlayers": false,
+      "source": {
+        "type": "component-image",
+        "assetId": "diplomat-card-10-face"
+      },
+      "rows": [
+        {
+          "id": "diplomat-card-10-row-top",
+          "position": "top",
+          "tone": "light",
+          "printed": [
+            "gain:coins:2",
+            "lantern"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "coins",
+              "amount": 2
+            },
+            {
+              "type": "lantern"
+            }
+          ]
+        },
+        {
+          "id": "diplomat-card-10-row-bottom",
+          "position": "bottom",
+          "tone": "dark",
+          "printed": [
+            "major-action:warrior"
+          ],
+          "effects": [
+            {
+              "type": "majorAction",
+              "action": "warrior"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "diplomat-card-11",
+      "numericId": 11,
+      "kind": "diplomat",
+      "excludedAtTwoPlayers": false,
+      "source": {
+        "type": "component-image",
+        "assetId": "diplomat-card-11-face"
+      },
+      "rows": [
+        {
+          "id": "diplomat-card-11-row-top",
+          "position": "top",
+          "tone": "light",
+          "printed": [
+            "gain:influence:1",
+            "lantern"
+          ],
+          "effects": [
+            {
+              "type": "gain",
+              "resource": "influence",
+              "amount": 1
+            },
+            {
+              "type": "lantern"
+            }
+          ]
+        },
+        {
+          "id": "diplomat-card-11-row-bottom",
+          "position": "bottom",
+          "tone": "dark",
+          "printed": [
+            "major-action:gardener"
+          ],
+          "effects": [
+            {
+              "type": "majorAction",
+              "action": "gardener"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "diplomat-card-12",
+      "numericId": 12,
+      "kind": "diplomat",
+      "excludedAtTwoPlayers": true,
+      "source": {
+        "type": "component-image",
+        "assetId": "diplomat-card-12-face"
+      },
+      "rows": [
+        {
+          "id": "diplomat-card-12-row-top",
+          "position": "top",
+          "tone": "light",
+          "printed": [
+            "choose-resource:3"
+          ],
+          "effects": [
+            {
+              "type": "choiceResource",
+              "amount": 3
+            }
+          ]
+        },
+        {
+          "id": "diplomat-card-12-row-bottom",
+          "position": "bottom",
+          "tone": "dark",
+          "printed": [
+            "major-action:gardener"
+          ],
+          "effects": [
+            {
+              "type": "majorAction",
+              "action": "gardener"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "daimyo-card-1",
+      "numericId": 1,
+      "kind": "daimyo",
+      "rewards": [
+        [
+          {
+            "type": "lantern"
+          }
+        ],
+        [
+          {
+            "type": "gain",
+            "resource": "iron",
+            "amount": 2
+          }
+        ],
+        [
+          {
+            "type": "gain",
+            "resource": "seals",
+            "amount": 2
+          }
+        ]
+      ],
+      "source": {
+        "type": "component-image",
+        "assetId": "daimyo-card-1-face"
+      }
+    },
+    {
+      "id": "daimyo-card-2",
+      "numericId": 2,
+      "kind": "daimyo",
+      "rewards": [
+        [
+          {
+            "type": "lantern"
+          }
+        ],
+        [
+          {
+            "type": "gain",
+            "resource": "food",
+            "amount": 2
+          }
+        ],
+        [
+          {
+            "type": "gain",
+            "resource": "points",
+            "amount": 2
+          }
+        ]
+      ],
+      "source": {
+        "type": "component-image",
+        "assetId": "daimyo-card-2-face"
+      }
+    },
+    {
+      "id": "daimyo-card-3",
+      "numericId": 3,
+      "kind": "daimyo",
+      "rewards": [
+        [
+          {
+            "type": "well"
+          }
+        ],
+        [
+          {
+            "type": "gain",
+            "resource": "food",
+            "amount": 2
+          }
+        ],
+        [
+          {
+            "type": "gain",
+            "resource": "influence",
+            "amount": 2
+          }
+        ]
+      ],
+      "source": {
+        "type": "component-image",
+        "assetId": "daimyo-card-3-face"
+      }
+    },
+    {
+      "id": "daimyo-card-4",
+      "numericId": 4,
+      "kind": "daimyo",
+      "rewards": [
+        [
+          {
+            "type": "well"
+          }
+        ],
+        [
+          {
+            "type": "gain",
+            "resource": "points",
+            "amount": 2
+          }
+        ],
+        [
+          {
+            "type": "gain",
+            "resource": "seals",
+            "amount": 2
+          }
+        ]
+      ],
+      "source": {
+        "type": "component-image",
+        "assetId": "daimyo-card-4-face"
+      }
+    },
+    {
+      "id": "daimyo-card-5",
+      "numericId": 5,
+      "kind": "daimyo",
+      "rewards": [
+        [
+          {
+            "type": "castleTile",
+            "color": "light"
+          }
+        ],
+        [
+          {
+            "type": "gain",
+            "resource": "pearl",
+            "amount": 2
+          }
+        ],
+        [
+          {
+            "type": "gain",
+            "resource": "points",
+            "amount": 2
+          }
+        ]
+      ],
+      "source": {
+        "type": "component-image",
+        "assetId": "daimyo-card-5-face"
+      }
+    },
+    {
+      "id": "daimyo-card-6",
+      "numericId": 6,
+      "kind": "daimyo",
+      "rewards": [
+        [
+          {
+            "type": "castleTile",
+            "color": "light"
+          }
+        ],
+        [
+          {
+            "type": "gain",
+            "resource": "influence",
+            "amount": 2
+          }
+        ],
+        [
+          {
+            "type": "gain",
+            "resource": "seals",
+            "amount": 2
+          }
+        ]
+      ],
+      "source": {
+        "type": "component-image",
+        "assetId": "daimyo-card-6-face"
+      }
+    },
+    {
+      "id": "daimyo-card-7",
+      "numericId": 7,
+      "kind": "daimyo",
+      "rewards": [
+        [
+          {
+            "type": "lantern"
+          }
+        ],
+        [
+          {
+            "type": "gain",
+            "resource": "influence",
+            "amount": 2
+          }
+        ],
+        [
+          {
+            "type": "gain",
+            "resource": "coins",
+            "amount": 3
+          }
+        ]
+      ],
+      "source": {
+        "type": "component-image",
+        "assetId": "daimyo-card-7-face"
+      }
+    },
+    {
+      "id": "daimyo-card-8",
+      "numericId": 8,
+      "kind": "daimyo",
+      "rewards": [
+        [
+          {
+            "type": "castleTile",
+            "color": "light"
+          }
+        ],
+        [
+          {
+            "type": "gain",
+            "resource": "iron",
+            "amount": 2
+          }
+        ],
+        [
+          {
+            "type": "gain",
+            "resource": "coins",
+            "amount": 3
+          }
+        ]
+      ],
+      "source": {
+        "type": "component-image",
+        "assetId": "daimyo-card-8-face"
+      }
+    },
+    {
+      "id": "daimyo-card-9",
+      "numericId": 9,
+      "kind": "daimyo",
+      "rewards": [
+        [
+          {
+            "type": "well"
+          }
+        ],
+        [
+          {
+            "type": "gain",
+            "resource": "pearl",
+            "amount": 2
+          }
+        ],
+        [
+          {
+            "type": "gain",
+            "resource": "coins",
+            "amount": 3
+          }
+        ]
+      ],
+      "source": {
+        "type": "component-image",
+        "assetId": "daimyo-card-9-face"
+      }
+    },
+    {
+      "id": "garden-card-1",
+      "numericId": 1,
+      "kind": "garden-plant",
+      "foodCost": 5,
+      "points": 9,
+      "action": [
+        {
+          "type": "pay",
+          "resource": "coins",
+          "amount": 4,
+          "then": [
+            {
+              "type": "castleTile",
+              "color": "any"
+            }
+          ]
+        }
+      ],
+      "source": {
+        "type": "component-image",
+        "assetId": "garden-card-1-face"
+      }
+    },
+    {
+      "id": "garden-card-2",
+      "numericId": 2,
+      "kind": "garden-plant",
+      "foodCost": 4,
+      "points": 7,
+      "action": [
+        {
+          "type": "pay",
+          "resource": "coins",
+          "amount": 3,
+          "then": [
+            {
+              "type": "majorAction",
+              "action": "gardener"
+            }
+          ]
+        }
+      ],
+      "source": {
+        "type": "component-image",
+        "assetId": "garden-card-2-face"
+      }
+    },
+    {
+      "id": "garden-card-3",
+      "numericId": 3,
+      "kind": "garden-plant",
+      "foodCost": 4,
+      "points": 7,
+      "action": [
+        {
+          "type": "pay",
+          "resource": "coins",
+          "amount": 3,
+          "then": [
+            {
+              "type": "majorAction",
+              "action": "courtier"
+            }
+          ]
+        }
+      ],
+      "source": {
+        "type": "component-image",
+        "assetId": "garden-card-3-face"
+      }
+    },
+    {
+      "id": "garden-card-4",
+      "numericId": 4,
+      "kind": "garden-plant",
+      "foodCost": 4,
+      "points": 7,
+      "action": [
+        {
+          "type": "pay",
+          "resource": "coins",
+          "amount": 3,
+          "then": [
+            {
+              "type": "majorAction",
+              "action": "warrior"
+            }
+          ]
+        }
+      ],
+      "source": {
+        "type": "component-image",
+        "assetId": "garden-card-4-face"
+      }
+    },
+    {
+      "id": "garden-card-5",
+      "numericId": 5,
+      "kind": "garden-plant",
+      "foodCost": 3,
+      "points": 5,
+      "action": [
+        {
+          "type": "pay",
+          "resource": "coins",
+          "amount": 4,
+          "then": [
+            {
+              "type": "domain"
+            }
+          ]
+        }
+      ],
+      "source": {
+        "type": "component-image",
+        "assetId": "garden-card-5-face"
+      }
+    },
+    {
+      "id": "garden-card-6",
+      "numericId": 6,
+      "kind": "garden-stone",
+      "foodCost": 1,
+      "points": 1,
+      "action": [
+        {
+          "type": "choiceResource",
+          "amount": 2
+        }
+      ],
+      "source": {
+        "type": "component-image",
+        "assetId": "garden-card-6-face"
+      }
+    },
+    {
+      "id": "garden-card-7",
+      "numericId": 7,
+      "kind": "garden-stone",
+      "foodCost": 1,
+      "points": 1,
+      "action": [
+        {
+          "type": "gain",
+          "resource": "coins",
+          "amount": 3
+        }
+      ],
+      "source": {
+        "type": "component-image",
+        "assetId": "garden-card-7-face"
+      }
+    },
+    {
+      "id": "garden-card-8",
+      "numericId": 8,
+      "kind": "garden-stone",
+      "foodCost": 2,
+      "points": 3,
+      "action": [
+        {
+          "type": "gain",
+          "resource": "seals",
+          "amount": 2
+        }
+      ],
+      "source": {
+        "type": "component-image",
+        "assetId": "garden-card-8-face"
+      }
+    },
+    {
+      "id": "garden-card-9",
+      "numericId": 9,
+      "kind": "garden-stone",
+      "foodCost": 2,
+      "points": 3,
+      "action": [
+        {
+          "type": "castleTile",
+          "color": "light"
+        }
+      ],
+      "source": {
+        "type": "component-image",
+        "assetId": "garden-card-9-face"
+      }
+    },
+    {
+      "id": "garden-card-10",
+      "numericId": 10,
+      "kind": "garden-stone",
+      "foodCost": 3,
+      "points": 5,
+      "action": [
+        {
+          "type": "well"
+        }
+      ],
+      "source": {
+        "type": "component-image",
+        "assetId": "garden-card-10-face"
+      }
+    },
+    {
+      "id": "starting-action-card-1",
+      "numericId": 1,
+      "kind": "starting-action",
+      "effect": {
+        "type": "majorAction",
+        "action": "courtier"
+      },
+      "source": {
+        "type": "component-image",
+        "assetId": "starting-action-card-1-face"
+      }
+    },
+    {
+      "id": "starting-action-card-2",
+      "numericId": 2,
+      "kind": "starting-action",
+      "effect": {
+        "type": "majorAction",
+        "action": "courtier"
+      },
+      "source": {
+        "type": "component-image",
+        "assetId": "starting-action-card-2-face"
+      }
+    },
+    {
+      "id": "starting-action-card-3",
+      "numericId": 3,
+      "kind": "starting-action",
+      "effect": {
+        "type": "majorAction",
+        "action": "warrior"
+      },
+      "source": {
+        "type": "component-image",
+        "assetId": "starting-action-card-3-face"
+      }
+    },
+    {
+      "id": "starting-action-card-4",
+      "numericId": 4,
+      "kind": "starting-action",
+      "effect": {
+        "type": "majorAction",
+        "action": "warrior"
+      },
+      "source": {
+        "type": "component-image",
+        "assetId": "starting-action-card-4-face"
+      }
+    },
+    {
+      "id": "starting-action-card-5",
+      "numericId": 5,
+      "kind": "starting-action",
+      "effect": {
+        "type": "majorAction",
+        "action": "gardener"
+      },
+      "source": {
+        "type": "component-image",
+        "assetId": "starting-action-card-5-face"
+      }
+    },
+    {
+      "id": "starting-action-card-6",
+      "numericId": 6,
+      "kind": "starting-action",
+      "effect": {
+        "type": "majorAction",
+        "action": "gardener"
+      },
+      "source": {
+        "type": "component-image",
+        "assetId": "starting-action-card-6-face"
+      }
+    },
+    {
+      "id": "starting-resource-card-1",
+      "numericId": 1,
+      "kind": "starting-resource",
+      "lantern": [
+        {
+          "type": "gain",
+          "resource": "pearl",
+          "amount": 1
+        }
+      ],
+      "resources": {
+        "food": 2,
+        "iron": 1,
+        "coins": 2,
+        "seals": 1
+      },
+      "decree": "coin",
+      "source": {
+        "type": "component-image",
+        "assetId": "starting-resource-card-1-face"
+      }
+    },
+    {
+      "id": "starting-resource-card-2",
+      "numericId": 2,
+      "kind": "starting-resource",
+      "lantern": [
+        {
+          "type": "gain",
+          "resource": "pearl",
+          "amount": 1
+        }
+      ],
+      "resources": {
+        "coins": 4,
+        "seals": 2
+      },
+      "choiceResources": 2,
+      "source": {
+        "type": "component-image",
+        "assetId": "starting-resource-card-2-face"
+      }
+    },
+    {
+      "id": "starting-resource-card-3",
+      "numericId": 3,
+      "kind": "starting-resource",
+      "lantern": [
+        {
+          "type": "gain",
+          "resource": "pearl",
+          "amount": 1
+        }
+      ],
+      "resources": {
+        "iron": 2,
+        "pearl": 1,
+        "coins": 5,
+        "seals": 1
+      },
+      "source": {
+        "type": "component-image",
+        "assetId": "starting-resource-card-3-face"
+      }
+    },
+    {
+      "id": "starting-resource-card-4",
+      "numericId": 4,
+      "kind": "starting-resource",
+      "lantern": [
+        {
+          "type": "gain",
+          "resource": "iron",
+          "amount": 1
+        }
+      ],
+      "resources": {
+        "pearl": 2,
+        "iron": 1,
+        "coins": 4
+      },
+      "decree": "seal",
+      "source": {
+        "type": "component-image",
+        "assetId": "starting-resource-card-4-face"
+      }
+    },
+    {
+      "id": "starting-resource-card-5",
+      "numericId": 5,
+      "kind": "starting-resource",
+      "lantern": [
+        {
+          "type": "gain",
+          "resource": "iron",
+          "amount": 1
+        }
+      ],
+      "resources": {
+        "coins": 4,
+        "seals": 1
+      },
+      "choiceResources": 3,
+      "source": {
+        "type": "component-image",
+        "assetId": "starting-resource-card-5-face"
+      }
+    },
+    {
+      "id": "starting-resource-card-6",
+      "numericId": 6,
+      "kind": "starting-resource",
+      "lantern": [
+        {
+          "type": "gain",
+          "resource": "iron",
+          "amount": 1
+        }
+      ],
+      "resources": {
+        "food": 1,
+        "iron": 2,
+        "pearl": 1,
+        "coins": 3,
+        "seals": 1
+      },
+      "source": {
+        "type": "component-image",
+        "assetId": "starting-resource-card-6-face"
+      }
+    },
+    {
+      "id": "starting-resource-card-7",
+      "numericId": 7,
+      "kind": "starting-resource",
+      "lantern": [
+        {
+          "type": "gain",
+          "resource": "food",
+          "amount": 1
+        }
+      ],
+      "resources": {
+        "coins": 2,
+        "seals": 2
+      },
+      "choiceResources": 1,
+      "decree": "points",
+      "source": {
+        "type": "component-image",
+        "assetId": "starting-resource-card-7-face"
+      }
+    },
+    {
+      "id": "starting-resource-card-8",
+      "numericId": 8,
+      "kind": "starting-resource",
+      "lantern": [
+        {
+          "type": "gain",
+          "resource": "food",
+          "amount": 1
+        }
+      ],
+      "resources": {
+        "food": 2,
+        "iron": 2,
+        "pearl": 1,
+        "coins": 4,
+        "seals": 1
+      },
+      "source": {
+        "type": "component-image",
+        "assetId": "starting-resource-card-8-face"
+      }
+    },
+    {
+      "id": "starting-resource-card-9",
+      "numericId": 9,
+      "kind": "starting-resource",
+      "lantern": [
+        {
+          "type": "gain",
+          "resource": "food",
+          "amount": 1
+        }
+      ],
+      "resources": {
+        "food": 4,
+        "iron": 2,
+        "coins": 3,
+        "seals": 2
+      },
+      "source": {
+        "type": "component-image",
+        "assetId": "starting-resource-card-9-face"
+      }
+    },
+    {
+      "id": "decree-card-coin",
+      "kind": "decree",
+      "decree": "coin",
+      "rewards": [
+        [
+          {
+            "type": "gain",
+            "resource": "coins",
+            "amount": 1
+          }
+        ]
+      ],
+      "assetRequired": false
+    },
+    {
+      "id": "decree-card-seal",
+      "kind": "decree",
+      "decree": "seal",
+      "rewards": [
+        [
+          {
+            "type": "gain",
+            "resource": "seals",
+            "amount": 1
+          }
+        ]
+      ],
+      "assetRequired": false
+    },
+    {
+      "id": "decree-card-points",
+      "kind": "decree",
+      "decree": "points",
+      "rewards": [
+        [
+          {
+            "type": "gain",
+            "resource": "points",
+            "amount": 1
+          }
+        ]
+      ],
+      "assetRequired": false
+    }
+  ]
+}
