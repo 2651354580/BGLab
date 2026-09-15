@@ -7,7 +7,7 @@
     {"name": "finish_action", "description": "结束当前可选行动链，并放弃尚未执行的全部已解锁行动；不能只因后缀未知就使用。", "fields": {}},
     {
       "name": "choose_starting_pair",
-      "description": "选择当前 Frame 列出的一个可用开局组合。",
+      "description": "开局尚未选组时，选择 Frame 中一组可用的固定配对卡。若该组附带任选资源，在同一条行动链中追加所需数量的 choose_reward(kind=starting_resource)。已选组的续选阶段不再调用此动作。",
       "fields": {"offer": {"type": "integer", "minimum": 0, "description": "当前 Frame 中开局组合的 offer 编号；不是 commit.id。"}}
     },
     {
@@ -28,7 +28,7 @@
       "name": "place_die_personal",
       "description": "把已选择的骰子放到当前座位个人领地的一条可见队列。",
       "inheritedFields": ["color", "side"],
-      "fields": {"row": {"type": "string", "enum": ["courtier", "gardener", "warrior"], "description": "个人领地队列；必须与当前骰色和 Frame 可用性一致。"}}
+      "fields": {"row": {"type": "string", "enum": ["courtier", "gardener", "warrior"], "description": "个人骰子工位的队列行位置名称，必须与当前骰色和 Frame 可用性一致。row=warrior 不表示获得武士行动；执行的是该行的露出奖励和当前卡牌效果。成员行动种类只由实际效果决定，可与队列行名称不同。"}}
     },
     {
       "name": "place_die_castle",

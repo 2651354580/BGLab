@@ -1,6 +1,6 @@
 [project]
 name = "bglab"
-version = "0.1.1"
+version = "0.1.2"
 license = "MIT"
 description = "Play browser board games with your own AI models"
 requires-python = ">=3.11"

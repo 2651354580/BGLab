@@ -1599,8 +1599,12 @@ class GameTeammateController:
         )
 
     def confirm_action_snapshot(self, state: dict) -> None:
-        """Clear semantic-v2 bindings after a changed snapshot is durable."""
-        if SubmissionState(self.tool_ctx).confirm_snapshot(authority_hash(state)):
+        """Expire bindings after durable confirmation, retaining turn numbering."""
+        try:
+            confirmed = SubmissionState(self.tool_ctx).confirm_snapshot(authority_hash(state))
+        except ValueError as exc:
+            raise GameInvariantError(str(exc)) from exc
+        if confirmed:
             self.persist()
 
     def enqueue_chat(self, sender_pid: int | str, message: str, message_id: int | None = None) -> None:
@@ -2108,9 +2112,9 @@ class GameTeammateController:
                 "rulesVersion": self.definition.snapshot_version,
                 "adapterVersion": self.definition.action_profile,
             }
-            restored_semantic = self.tool_ctx.pop(
-                "_restored_semantic_v2_lifecycle", None,
-            )
+            restored_semantic = self.tool_ctx.pop("_restored_semantic_v2_lifecycle", None)
+            if restored_semantic is None:
+                restored_semantic = copy.deepcopy(self.tool_ctx.get("_semantic_lifecycle_v2"))
             restored_semantic_pending = bool(
                 self.tool_ctx.get(
                     "_semantic_lifecycle_pending_confirmation", False,
@@ -2285,7 +2289,7 @@ class GameTeammateController:
                 SEMANTIC_V2_RETRIEVAL_SURFACE_HASH,
             )
             from bglab.games.tools.semantic_lifecycle import (
-                restore_semantic_lifecycle,
+                restore_turn_semantic_lifecycle,
                 semantic_identity_from_ctx,
                 serialize_semantic_lifecycle,
             )
@@ -2317,7 +2321,7 @@ class GameTeammateController:
             )
             semantic_identity = semantic_identity_from_ctx(self.tool_ctx)
             valid_semantic_v2 = (
-                restore_semantic_lifecycle(restored_semantic, semantic_identity)
+                restore_turn_semantic_lifecycle(restored_semantic, semantic_identity)
                 if semantic_identity is not None
                 else None
             )

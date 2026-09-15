@@ -414,6 +414,7 @@
             marketCardIds:marketCards.map(card => card.id),
             deckLevels:[1,2,3].filter(level => state.decks[level]?.length),
             nobleIds:(state.wrapper.pendingNobles?.ids || []).map(Number),
+            eligibleNobleIds:modelNobleFacts.filter(noble => Object.values(noble.remainingBonusGap).every(gap => gap === 0)).map(noble => noble.nobleId),
             requiredDiscardCount:Math.max(
               0,
               GEMS.reduce((total, color) => total + Number(player[color] || 0), 0) - 10,

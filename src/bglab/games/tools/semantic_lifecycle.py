@@ -12,8 +12,8 @@ from typing import Any
 from bglab.games.semantic_validation.fingerprint import canonical_steps_fingerprint
 
 
-_CANDIDATE_LABEL_RE = re.compile(r"C[1-5]\Z")
-_DEFERRED_CANDIDATE_LABEL_RE = re.compile(r"(?:C[1-5]|R[1-3]\.C[1-5])\Z")
+_CANDIDATE_LABEL_RE = re.compile(r"C[1-9]\Z")
+_DEFERRED_CANDIDATE_LABEL_RE = re.compile(r"(?:C[1-9]|R[1-3]\.C[1-5])\Z")
 _COMMIT_FENCE_STATUSES = frozenset(
     {
         "prepared",
@@ -23,7 +23,7 @@ _COMMIT_FENCE_STATUSES = frozenset(
         "indeterminate",
     },
 )
-_SEMANTIC_LIFECYCLE_VERSION = 4
+_SEMANTIC_LIFECYCLE_VERSION = 5
 _LEGACY_SEMANTIC_LIFECYCLE_VERSION = 2
 
 
@@ -248,7 +248,7 @@ class BoundCandidate:
 
     def __post_init__(self) -> None:
         if _CANDIDATE_LABEL_RE.fullmatch(self.label) is None:
-            raise ValueError("candidate label must be C1-C5")
+            raise ValueError("candidate label must be C1-C9")
         if not _nonempty_string(self.program_id):
             raise ValueError("program_id must be a non-empty string")
         if not isinstance(self.engine_steps, (list, tuple)) or not self.engine_steps:
@@ -328,7 +328,7 @@ class DeferredAuthorityCandidate:
 
     def __post_init__(self) -> None:
         if _DEFERRED_CANDIDATE_LABEL_RE.fullmatch(self.source_label) is None:
-            raise ValueError("deferred source label must be C1-C5 or R1.C1-R3.C5")
+            raise ValueError("deferred source label must be C1-C9 or R1.C1-R3.C5")
         if not _nonempty_string(self.program_id):
             raise ValueError("program_id must be a non-empty string")
         if not isinstance(self.engine_steps, (list, tuple)) or not self.engine_steps:
@@ -403,7 +403,7 @@ class CommitFence:
 
     def __post_init__(self) -> None:
         if _CANDIDATE_LABEL_RE.fullmatch(self.candidate_label) is None:
-            raise ValueError("candidate_label must be C1-C5")
+            raise ValueError("candidate_label must be C1-C9")
         if not _nonempty_string(self.delivery_fingerprint):
             raise ValueError("delivery_fingerprint must be non-empty")
         if self.status not in _COMMIT_FENCE_STATUSES:
@@ -441,10 +441,11 @@ class SemanticLifecycle:
     commit_fence: CommitFence | None = None
     version: int = _SEMANTIC_LIFECYCLE_VERSION
     checked_candidates: Mapping[str, BoundCandidate] = field(default_factory=dict)
+    route_numbers: Mapping[str, int] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if self.version != _SEMANTIC_LIFECYCLE_VERSION:
-            raise ValueError("semantic lifecycle version must be 4")
+            raise ValueError("semantic lifecycle version must be 5")
         if not isinstance(self.identity, SemanticDecisionIdentity):
             raise TypeError("identity must be SemanticDecisionIdentity")
         if not isinstance(self.candidates, Mapping):
@@ -453,10 +454,10 @@ class SemanticLifecycle:
             raise ValueError("deferred_candidates must be a mapping")
         if not isinstance(self.checked_candidates, Mapping):
             raise ValueError("checked_candidates must be a mapping")
-        if not self.candidates and not self.deferred_candidates and not self.checked_candidates:
+        if not self.candidates and not self.deferred_candidates and not self.checked_candidates and not self.route_numbers:
             raise ValueError("lifecycle must bind a commit-ready or deferred candidate")
-        if len(self.candidates) > 5:
-            raise ValueError("at most five candidates may be bound")
+        if len(self.candidates) > 9:
+            raise ValueError("at most nine candidates may be bound")
         if len(self.deferred_candidates) > 15:
             raise ValueError("at most fifteen deferred candidates may be bound")
         expected_labels = {
@@ -512,6 +513,25 @@ class SemanticLifecycle:
                 raise ValueError("checked candidate must match its full delivery fingerprint")
             checked[fingerprint] = candidate
         object.__setattr__(self, "checked_candidates", MappingProxyType(checked))
+        if not isinstance(self.route_numbers, Mapping):
+            raise ValueError("route_numbers must be a mapping")
+        numbers = dict(self.route_numbers)
+        if any(
+            not isinstance(fingerprint, str) or re.fullmatch(r"[0-9a-f]{64}", fingerprint) is None
+            or isinstance(number, bool) or not isinstance(number, int) or number < 1
+            for fingerprint, number in numbers.items()
+        ):
+            raise ValueError("route numbers require full fingerprints and positive integers")
+        if len(set(numbers.values())) != len(numbers) or max(numbers.values(), default=0) != len(numbers):
+            raise ValueError("route numbers must be unique and contiguous from 1")
+        # Keep retired numbers as reservations until the turn changes. A later
+        # Check can append aliases, but can never rebind an earlier number.
+        for candidate in (*checked.values(), *ordered.values()):
+            if candidate.commit_ready:
+                fingerprint = semantic_delivery_fingerprint(self.identity, candidate)
+                if fingerprint not in numbers:
+                    numbers[fingerprint] = len(numbers) + 1
+        object.__setattr__(self, "route_numbers", MappingProxyType(numbers))
 
 
 def all_checked_candidates(lifecycle: SemanticLifecycle) -> tuple[BoundCandidate, ...]:
@@ -529,6 +549,11 @@ def retain_checked_candidates(
 ) -> SemanticLifecycle | None:
     """A read-only Check changes the displayed batch, not earlier valid bindings."""
     checked = {}
+    numbers = {}
+    if current is not None and semantic_turn_scope(current.identity) == semantic_turn_scope(identity):
+        if current.commit_fence is not None:
+            raise ValueError("cannot replace a lifecycle with an active commit fence")
+        numbers.update(current.route_numbers)
     if current is not None and not semantic_identity_is_stale(current.identity, identity):
         if current.commit_fence is not None:
             raise ValueError("cannot replace a lifecycle with an active commit fence")
@@ -536,9 +561,18 @@ def retain_checked_candidates(
             semantic_delivery_fingerprint(identity, candidate): replace(candidate, label="C1")
             for candidate in all_checked_candidates(current)
         })
-    if not candidates and not checked:
+    if not candidates and not checked and not numbers:
         return None
-    return SemanticLifecycle(identity=identity, candidates=candidates, checked_candidates=checked)
+    return SemanticLifecycle(identity=identity, candidates=candidates, checked_candidates=checked, route_numbers=numbers)
+
+
+def semantic_turn_scope(identity: SemanticDecisionIdentity) -> tuple[str, str, str, int]:
+    return identity.session_id, identity.game_id, identity.turn_group_id, identity.seat
+
+
+def semantic_route_number(lifecycle: SemanticLifecycle, candidate: BoundCandidate) -> int:
+    """Return the persisted model-facing alias, never the current display rank."""
+    return lifecycle.route_numbers[semantic_delivery_fingerprint(lifecycle.identity, candidate)]
 
 
 def semantic_identity_from_ctx(
@@ -670,11 +704,7 @@ def semantic_delivery_fingerprint(
 
 
 def semantic_route_id(identity: SemanticDecisionIdentity, candidate: BoundCandidate) -> str:
-    """Public reference to a concrete transaction, independent of its display rank.
-
-    Recomputed from the persisted binding: no mutable ID counter or parallel store.
-    Resolution must match exactly one candidate, so even a collision fails closed.
-    """
+    """Legacy opaque reference accepted for already-saved calls, not new output."""
     return "r" + semantic_delivery_fingerprint(identity, candidate)[:24]
 
 
@@ -696,6 +726,7 @@ def serialize_semantic_lifecycle(
             fingerprint: candidate.to_dict()
             for fingerprint, candidate in lifecycle.checked_candidates.items()
         },
+        "routeNumbers": dict(lifecycle.route_numbers),
         "commitFence": (
             lifecycle.commit_fence.to_dict()
             if lifecycle.commit_fence is not None
@@ -718,16 +749,21 @@ def restore_semantic_lifecycle(
         "candidates",
         "deferredCandidates",
         "checkedCandidates",
+        "routeNumbers",
         "commitFence",
         "lifecycleFingerprint",
     }
-    v3_required = required - {"checkedCandidates"}
+    v4_required = required - {"routeNumbers"}
+    v3_required = v4_required - {"checkedCandidates"}
     legacy_required = v3_required - {"deferredCandidates"}
     if not isinstance(value, Mapping):
         return None
     version = value.get("version")
     if version == _SEMANTIC_LIFECYCLE_VERSION:
         if set(value) != required:
+            return None
+    elif version == 4:
+        if set(value) != v4_required:
             return None
     elif version == 3:
         if set(value) != v3_required:
@@ -754,7 +790,7 @@ def restore_semantic_lifecycle(
             return None
         candidates[label] = candidate
     deferred_candidates: dict[str, DeferredAuthorityCandidate] = {}
-    if version in (3, _SEMANTIC_LIFECYCLE_VERSION):
+    if version in (3, 4, _SEMANTIC_LIFECYCLE_VERSION):
         raw_deferred = value.get("deferredCandidates")
         if not isinstance(raw_deferred, Mapping):
             return None
@@ -766,7 +802,7 @@ def restore_semantic_lifecycle(
                 return None
             deferred_candidates[label] = candidate
     checked_candidates: dict[str, BoundCandidate] = {}
-    if version == _SEMANTIC_LIFECYCLE_VERSION:
+    if version in (4, _SEMANTIC_LIFECYCLE_VERSION):
         raw_checked = value.get("checkedCandidates")
         if not isinstance(raw_checked, Mapping):
             return None
@@ -786,10 +822,15 @@ def restore_semantic_lifecycle(
             deferred_candidates=deferred_candidates,
             commit_fence=fence,
             checked_candidates=checked_candidates,
+            route_numbers=value.get("routeNumbers", {}),
         )
     except (TypeError, ValueError):
         return None
-    if version in (_LEGACY_SEMANTIC_LIFECYCLE_VERSION, 3):
+    if version == _SEMANTIC_LIFECYCLE_VERSION and dict(lifecycle.route_numbers) != value.get("routeNumbers"):
+        # Only legacy versions may allocate aliases on restoration. A v5 map
+        # must be restored exactly, never silently reconstructed after damage.
+        return None
+    if version in (_LEGACY_SEMANTIC_LIFECYCLE_VERSION, 3, 4):
         legacy_payload = {
             key: value[key]
             for key in value if key != "lifecycleFingerprint"
@@ -804,6 +845,31 @@ def restore_semantic_lifecycle(
     return lifecycle
 
 
+def restore_turn_semantic_lifecycle(
+    value: Any, current_identity: SemanticDecisionIdentity,
+) -> SemanticLifecycle | None:
+    """Carry alias reservations across frames, never stale action bindings."""
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise ValueError("INVALID_SEMANTIC_LIFECYCLE: stored route numbering is invalid")
+    stored_identity = SemanticDecisionIdentity.from_dict(value.get("identity"))
+    if stored_identity is None:
+        raise ValueError("INVALID_SEMANTIC_LIFECYCLE: stored identity is invalid")
+    if semantic_turn_scope(stored_identity) != semantic_turn_scope(current_identity):
+        return None
+    stored = restore_semantic_lifecycle(value, stored_identity)
+    if stored is None:
+        raise ValueError("INVALID_SEMANTIC_LIFECYCLE: cannot safely restore route numbers")
+    if stored_identity == current_identity:
+        return stored
+    if stored.commit_fence is not None and stored.commit_fence.status != "sink_confirmed":
+        raise ValueError("COMMIT_FENCE_ACTIVE: previous decision requires reconciliation")
+    if not stored.route_numbers:
+        return None
+    return SemanticLifecycle(identity=current_identity, candidates={}, route_numbers=stored.route_numbers)
+
+
 __all__ = [
     "BoundCandidate",
     "CommitFence",
@@ -816,6 +882,9 @@ __all__ = [
     "promote_deferred_candidate",
     "retain_checked_candidates",
     "restore_semantic_lifecycle",
+    "restore_turn_semantic_lifecycle",
+    "semantic_route_number",
+    "semantic_turn_scope",
     "semantic_chain_fingerprint",
     "semantic_delivery_fingerprint",
     "semantic_identity_from_ctx",

@@ -46,7 +46,7 @@ export function renderPublicOutcome(outcome: Record<string, unknown>): string {
   const atom = (value: unknown): string => {
     const text = typeof value === "string" ? value.trim().replace(/\s+/g, " ")
       : numeric(value) ? String(value) : "null";
-    return [...text].length <= 48 ? text : [...text].slice(0, 47).join("") + "…";
+    return text;
   };
   const signed = (value: number) => value >= 0 ? `+${value}` : String(value);
   const labels: Record<string, string> = {coins:"钱", seals:"印", food:"食", iron:"铁", pearl:"珍", influence:"影响"};

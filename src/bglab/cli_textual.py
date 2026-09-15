@@ -1,4 +1,19 @@
-"""Textual terminal interface for BGLab."""
+"""Textual-based REPL — fullscreen TUI for bglab.
+
+Ink features ported (from ink-ui/):
+  components/theme.ts          → Theme constants
+  components/TaskBoard.tsx     → TaskStore + TaskBoard widget
+  components/PlanModeBanner.tsx → PlanModeBanner widget
+  components/StatusLine.tsx    → Enhanced StatusLine widget
+  main.tsx                     → Divider, Pane, Byline, StatusIcon, ToolPill,
+                                 ToolCard, Spinner (stall detection),
+                                 SessionPicker, SlashPalette,
+                                 Permission dialog (3-option), Toast,
+                                 Welcome screen, HelpPane, CommandCard
+
+Usage:
+  python -m bglab.cli_textual
+"""
 
 from __future__ import annotations
 
@@ -438,7 +453,7 @@ class AssistantText(Static):
 
 
 class Divider(_SafeStatic):
-    """Full-width horizontal rule with optional centered title"""
+    """Full-width horizontal rule with optional centered title — Ink's Divider."""
 
     def __init__(self, text: str = "", color: str | None = None, **kwargs):
         super().__init__("─", **kwargs)
@@ -473,7 +488,7 @@ class Divider(_SafeStatic):
 
 
 class Pane(_SafeStatic):
-    """Bordered section with accent color"""
+    """Bordered section with accent color — Ink's Pane."""
 
     def __init__(self, title: str = "", color: str = C_ORANGE, children_text: str = "", **kwargs):
         super().__init__(" ", **kwargs)
@@ -499,7 +514,7 @@ class Pane(_SafeStatic):
 
 
 class StatusIcon(_SafeStatic):
-    """Status indicator icon with color"""
+    """Status indicator icon with color — Ink's StatusIcon."""
 
     ICONS = {
         "success": ("✓", C_GREEN),
@@ -517,7 +532,7 @@ class StatusIcon(_SafeStatic):
 
 
 class ToolPill(_SafeStatic):
-    """Colored tool name badge"""
+    """Colored tool name badge — Ink's ToolPill."""
 
     def __init__(self, name: str, is_error: bool = False, **kwargs):
         bg = TOOL_BG.get(name, C_DIM)
@@ -526,7 +541,7 @@ class ToolPill(_SafeStatic):
 
 
 class Byline(_SafeStatic):
-    """Dot-separated metadata line"""
+    """Dot-separated metadata line — Ink's Byline."""
 
     def __init__(self, parts: list[str], **kwargs):
         text = " · ".join(parts)
@@ -570,7 +585,7 @@ class PlanModeBanner(_SafeStatic):
 # ══════════════════════════════════════════════════════════════════════
 
 class TaskBoard(_SafeStatic):
-    """Task list display"""
+    """Task list display — Ink's TaskBoard component."""
 
     MAX_VISIBLE = 8
 
@@ -688,7 +703,7 @@ class StatusLine(_SafeStatic):
 
 
 # ══════════════════════════════════════════════════════════════════════
-# Toast — ephemeral notification
+# Toast — ephemeral notification (new, from Ink concept)
 # ══════════════════════════════════════════════════════════════════════
 
 class Toast(_SafeStatic):
@@ -812,7 +827,7 @@ class ToolCard(_SafeStatic):
 # ══════════════════════════════════════════════════════════════════════
 
 class ThinkingLine(_SafeStatic):
-    """Animated spinner with stall detection"""
+    """Animated spinner with stall detection — Ink's Spinner."""
 
     def __init__(self, **kwargs):
         super().__init__(" ", **kwargs)

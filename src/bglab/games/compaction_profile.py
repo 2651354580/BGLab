@@ -7,7 +7,9 @@ import re
 
 from bglab.compaction.autocompact import CompactionProfile
 from bglab.engine.attachments import AttachmentValue, ProviderContext
-from bglab.games.model_visible_frame import CURRENT_ACTIONS_HEADING
+from bglab.games.model_visible_frame import (
+    CURRENT_ACTIONS_HEADING, NEXT_DECISION_HEADING, NEXT_DECISION_GUIDANCE,
+)
 
 
 GAME_COMPACT_SYSTEM_PROMPT = """你正在整理一名桌游玩家的较早历史，供同一玩家继续对局。
@@ -85,6 +87,7 @@ def _is_legacy_rendered_frame(content: object) -> bool:
         return False
     has_turn_fact = False
     has_actions = False
+    has_task = False
     for section in re.finditer(r"^## ([^\n]+)\n(.*?)(?=^## |\Z)", content, re.M | re.S):
         heading, body = section.group(1), section.group(2).strip()
         if heading.endswith(" [TurnFact]") and body:
@@ -96,6 +99,8 @@ def _is_legacy_rendered_frame(content: object) -> bool:
                 except ValueError:
                     continue
                 has_turn_fact = isinstance(data, dict) and bool(data)
+        elif heading == NEXT_DECISION_HEADING:
+            has_task = body == NEXT_DECISION_GUIDANCE
         elif heading in {"Current semantic actions", CURRENT_ACTIONS_HEADING}:
             try:
                 actions = json.loads(body)
@@ -107,7 +112,7 @@ def _is_legacy_rendered_frame(content: object) -> bool:
                 and bool(action["action"].strip())
                 for action in actions
             )
-    return has_turn_fact and has_actions
+    return has_turn_fact and (has_actions or has_task)
 
 
 def retire_superseded_game_frames(messages: list[dict]) -> list[dict]:

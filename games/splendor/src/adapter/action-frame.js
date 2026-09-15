@@ -36,7 +36,8 @@
         id:'current-player-choices',
         title:'Current player choices',
         data:{
-          meaning:'Discard exactly the required total using only tokens currently held.',
+          meaning:'Discard exactly the required total using only tokens currently held; then resolve the end-of-turn noble visit. If multiple nobles are already eligible, append choose_noble.',
+          eligibleNobleIds:[...(input.eligibleNobleIds || [])],
           discardGems:{
             requiredTotal:input.requiredDiscardCount,
             availableTokens:{...input.availableTokens},
@@ -52,7 +53,8 @@
       id:'current-player-choices',
       title:'Current player choices',
       data:{
-        meaning:'These are legal main-action targets. Buying also requires payment tokens using the displayed discounted cost; taking excess tokens requires discards. Use only listed colors, cards and deck levels.',
+        meaning:'These are legal main-action targets. Buying also requires payment tokens using the displayed discounted cost; taking excess tokens requires discards. Resolve one eligible noble at the end of any action, after required discards. If multiple nobles are already eligible, append choose_noble; after a purchase, use the updated bonuses. Use only listed colors, cards and deck levels.',
+        eligibleNobleIds:[...(input.eligibleNobleIds || [])],
         choices:{
           takeGems:{
             distinctColorSets:combinations(colors, distinctCount),

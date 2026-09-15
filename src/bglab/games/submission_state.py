@@ -14,6 +14,7 @@ from typing import Any
 
 from bglab.games.tools.semantic_lifecycle import (
     SemanticDecisionIdentity,
+    SemanticLifecycle,
     restore_semantic_lifecycle,
     serialize_semantic_lifecycle,
 )
@@ -47,14 +48,25 @@ class SubmissionState:
         })
 
     def confirm_snapshot(self, state_hash: str) -> bool:
-        """A changed durable authority snapshot expires the previous binding."""
+        """Expire action bindings; keep alias reservations until the turn changes."""
         if not self.context.get("_semantic_lifecycle_pending_confirmation"):
             return False
         payload = self.lifecycle_payload()
         identity = payload.get("identity") if payload is not None else None
         if not isinstance(identity, dict) or state_hash == identity.get("stateHash"):
             return False
+        stored_identity = SemanticDecisionIdentity.from_dict(identity)
+        lifecycle = restore_semantic_lifecycle(payload, stored_identity) if stored_identity is not None else None
+        if lifecycle is None:
+            raise ValueError("cannot confirm an invalid semantic lifecycle envelope")
+        # The next frame owns its full identity. No old action stays executable,
+        # but a continuation of this turn must not reuse a number for a new route.
+        reserved = serialize_semantic_lifecycle(SemanticLifecycle(
+            identity=lifecycle.identity, candidates={}, route_numbers=lifecycle.route_numbers,
+        )) if lifecycle.route_numbers else None
+        slot = self._stored()[0]
         self.context.update({slot: None for slot in _LIFECYCLE_SLOTS})
+        self.context[slot] = reserved
         self.context.update({
             "_semantic_lifecycle_pending_confirmation": False,
             "_semantic_commit_fence": None,

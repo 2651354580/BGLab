@@ -4,7 +4,7 @@
 
 BGLab 是一个本地运行的 AI 桌游平台。接入自己的模型后，就能与 AI 对局，或观看 AI 之间的比赛。棋盘在浏览器中展示，支持中途保存、继续游戏和历史回放。
 
-当前版本 **0.1.1**，主要面向 Windows，以源码形式提供。项目专注于桌游，附带的编程功能仅供尝试。
+当前版本 **0.1.2**，主要面向 Windows，以源码形式提供。项目专注于桌游，附带的编程功能仅供尝试。
 
 ## 快速开始
 
@@ -39,7 +39,7 @@ npm --prefix games/the-white-castle run build
 Test-Path .\.venv\Scripts\bglab.exe
 ```
 
-应显示版本 `0.1.1`，第二条返回 `True`。
+应显示版本 `0.1.2`，第二条返回 `True`。
 
 - **pip 报 SSL 错误，随后找不到 `hatchling` 等依赖**：先处理到 `pypi.org`、`files.pythonhosted.org` 的连接问题。npm 使用不同的下载服务，它安装成功不代表 pip 的网络正常。若没有网络错误，再检查 Python 与依赖版本。
 - **无法识别 `bglab.exe`**：确认当前目录是项目根目录，并用上面的命令检查主程序是否安装成功。
@@ -68,7 +68,7 @@ $env:PIP_PROXY = Read-Host "请输入实际 HTTP 代理地址（含 http:// 和�
 
 | 服务商 | 配置说明 |
 | --- | --- |
-| DeepSeek 官方 | 选择 `DeepSeek` → `DeepSeek V4 Flash`，地址保持 `https://api.deepseek.com/v1` |
+| DeepSeek 官方 | 选择 `DeepSeek` → `DeepSeek V4.1 Flash`，地址保持 `https://api.deepseek.com/v1` |
 | OpenCode Go | 选择 `OpenCode Go`，使用对应的地址与 Key |
 | 自定义中转 | 选择中转兼容的服务商类型，再填写地址与模型 ID |
 
@@ -107,7 +107,7 @@ $env:PIP_PROXY = Read-Host "请输入实际 HTTP 代理地址（含 http:// 和�
 
 ## 工作原理
 
-AI 根据当前局面和游戏策略选择行动，先核验、再提交，由游戏引擎执行并计分。每个 AI 独立保留本局的决策历史，棋盘和存档随行动同步更新。
+AI 根据当前局面和游戏策略选择行动。拿不准费用或效果时，可以先核验路线；确定后提交，由游戏引擎执行并计分。每个 AI 独立保留本局的决策历史，棋盘和存档随行动同步更新。
 
 ## 当前局限
 

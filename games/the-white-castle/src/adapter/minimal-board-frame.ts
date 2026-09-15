@@ -5,6 +5,7 @@ import {
   domainRowRewardSources,
   getLegalActions,
   INFLUENCE_CHECKPOINTS,
+  RESOURCE_CAPS,
   DAIMYO_CARDS,
   DIPLOMAT_CARDS,
   STEWARD_CARDS,
@@ -229,7 +230,7 @@ export function buildMinimalBoardFrame(
       if (domainRow) {
         const sources = domainRowRewardSources(state, seat, domainRow);
         return `all rewards resolve in printed order: revealed queue=[${render(sources.queue)}]; `
-          + `current card=[${render(sources.card)}]`;
+          + `current action-card effects=[${render(sources.card)}]`;
       }
       const groups = workspace.effectGroupsByColor?.[color as "black"|"white"|"coral"];
       if (groups?.length) {
@@ -285,7 +286,7 @@ export function buildMinimalBoardFrame(
     const personalMatch = /^p[0-9]+-domain-(courtier|gardener|warrior)$/.exec(workspace.id);
     const castleMatch = /^castle-(steward|diplomat)-([0-9]+)$/.exec(workspace.id);
     const visibleName = personalMatch
-      ? `personal ${personalMatch[1]}`
+      ? `personal row=${personalMatch[1]}`
       : castleMatch
         ? `${castleMatch[1]} room ${castleMatch[2]}`
         : workspace.id;
@@ -484,7 +485,7 @@ export function buildMinimalBoardFrame(
       }),
       fact("ResourceSnapshot", "personal", "Personal", {
         lines:[
-          `Resources: coins=${player.resources.coins}, seals=${player.resources.seals}, food=${player.resources.food}, iron=${player.resources.iron}, pearl=${player.resources.pearl}.`,
+          `Resources: coins=${player.resources.coins}; ${(['seals','food','iron','pearl'] as const).map(resource=>`${resource}=${player.resources[resource]} (cap ${RESOURCE_CAPS[resource]})`).join('; ')}.`,
           `Influence=${player.influence}; influence_checkpoint choiceIds=[0=pay and cross,1=stop before checkpoint]; next=${nextCheckpoints.join(", ") || "none"}.`,
           `Lantern=${lantern}; ${player.lanternEffects.length > 1
             ? "resolve all in an order you choose"
@@ -503,8 +504,8 @@ export function buildMinimalBoardFrame(
           "Seal exchange available: 1 seal→1 coin; 2→1 food/iron/pearl; repeatable, no die action.",
           "Public workspaces:",
           ...publicWorkspaces,
-          "Personal workspaces: placing a die activates only its listed rewards, not a member move. Recruiting/deploying from domain reveals row rewards.",
-          "Row names identify member queues, not the action supplied by the current card. Queue rewards accumulate as members leave domain; card rewards change only when the card is replaced. Activate the row to receive both; revealing/replacing alone does not pay them.",
+          "Personal dice workspaces: row=courtier/gardener/warrior identifies a member-reserve row, not a member action. Activate the position to receive its revealed queue rewards and current action-card effects in order.",
+          "Only an explicit courtier/gardener/warrior action in the actual effects opens that member action; it may differ from the row name. Recruiting/deploying reveals queue rewards; replacing the card changes card effects. Neither change alone activates the row.",
           ...personalWorkspaces,
           "personal_row_choice: unused rows ordered courtier/gardener/warrior; remove used rows (die or reward), renumber from 0. "
           + "The once-per-turn limit is per personal row activation, not per member type: separately unlocked gardener/warrior/courtier actions can occur in the same turn.",
@@ -559,10 +560,9 @@ export function buildMinimalBoardFrame(
       }),
       fact("DynamicScoreFact", "scoring", "Score", {
         lines:[
-          `Now: total=${currentScore.total}; during=${currentScore.duringGame}; resource=${currentScore.resources}; track=${currentScore.timeTrack}; courtier=${currentScore.courtiers}; warrior=${currentScore.warriors}; gardener=${currentScore.gardeners}.`,
+          `Now: total=${currentScore.total}; during=${currentScore.duringGame}; track=${currentScore.timeTrack}; courtier=${currentScore.courtiers}; warrior=${currentScore.warriors}; gardener=${currentScore.gardeners}.`,
           `Opponent totals: ${opponentScores || "none"}.`,
           "Influence end: 0-5=0; 6-10=3; 11-14=6; 15-20=position minus 5. Positions count spaces from the heron, not printed score values.",
-          "Resource end=floor((coins+seals)/5); each food/iron/pearl scores 1 at 3-6 or 2 at 7.",
           "Member end: courtier gate/steward/diplomat/daimyo=1/3/6/10; gardener=garden points; warrior=yard value x castle courtiers.",
         ],
       }),

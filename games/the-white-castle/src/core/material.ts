@@ -126,6 +126,8 @@ export const GARDEN_CARDS: GardenCardData[] = manifest.cards.filter((card) => ca
 
 export const STARTING_ACTION_CARDS = manifest.cards.filter((card) => card.kind === "starting-action").map((card) => ({
   id: numericId(card), materialId: card.id, effect: card.effect!,
+  // One unsplit printed action spans all three personal-domain rows.
+  domainRows: ["courtier", "gardener", "warrior"] as const,
 }));
 
 export const STARTING_RESOURCE_CARDS: StartingResourceCardData[] = manifest.cards.filter((card) => card.kind === "starting-resource").map((card) => ({

@@ -16,6 +16,7 @@
     draftStack:[],
     turnCheckpoint:null,
     pendingChain:null,
+    pendingNobleChoices:null,
     irreversiblePending:null,
     discard:{},
     discardRequired:0,
@@ -114,6 +115,7 @@
       this.draft = {take:{C:0,S:0,E:0,R:0,O:0}, cardId:null, payment:null};
       this.draftStack = [];
       this.pendingChain = null;
+      this.pendingNobleChoices = null;
       this.discard = {};
       this.discardRequired = 0;
       this.irreversiblePending = null;
@@ -332,6 +334,8 @@
         if (snapshot.wrapper.phase === 'choose_noble') {
           const ids = snapshot.wrapper.pendingNobles.ids;
           eligible = snapshot.gamestorage.nobles.filter(n => ids.includes(n.id));
+        } else if (this.pendingNobleChoices) {
+          eligible = this.pendingNobleChoices;
         } else if (this.pendingChain?.steps[0]?.action === 'buy_card' && this.draft.source === 'reserved') {
           eligible = this.eligibleNoblesAfterPurchase(snapshot, snapshot.wrapper.currentPlayer, snapshot.carddb[this.draft.cardId]);
         }
@@ -694,9 +698,8 @@
 
     confirmReserve() {
       const snapshot = this.snapshot();
-      const gain = snapshot.gamestorage.G > 0 ? 1 : 0;
       const steps = [{op:'begin',action:'reserve_card'},{op:'select_card',source:'market',cardId:this.draft.cardId}];
-      this.prepareOrCommit({steps}, gain);
+      return this.commit({steps});
     },
 
     reserveDeck(level) {
@@ -733,6 +736,7 @@
       if (!this.currentHuman() || !this.draftStack.length || this.irreversiblePending || this.discardRequired) return;
       this.draft = this.draftStack.pop();
       this.pendingChain = null;
+      this.pendingNobleChoices = null;
       this.render();
     },
 
@@ -798,6 +802,13 @@
       const cardMotion = this.captureCardMotion(chain);
       const result = window.BGLabGameAdapter.dispatch(this.view.decisionId, chain);
       if (!result.ok) {
+        if (result.code === 'NOBLE_SELECTION_REQUIRED' && result.facts?.eligibleNobles?.length) {
+          this.pendingChain = clone(chain);
+          this.pendingNobleChoices = clone(result.facts.eligibleNobles);
+          this.discardRequired = 0;
+          this.render();
+          return result;
+        }
         this.message(result.message + '；' + result.correction);
         return result;
       }

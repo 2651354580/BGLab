@@ -12,6 +12,7 @@ from bglab.games.semantic_validation import SemanticDescriptor
 from bglab.games.semantic_validation.checked_route_fact import CheckedRouteFact
 from bglab.games.semantic_validation.render import render_checked_route_facts
 from bglab.games.tools.semantic_check import (
+    BATCH_CHECK_RESULT_LIMIT,
     CheckHandler,
     CheckOutcome,
     CheckPorts,
@@ -163,69 +164,39 @@ def _render_batch(
     outcome_renderer: Callable[[Mapping[str, object]], str] | None = None,
 ) -> str:
     sections = ["多路线只读校验结果："]
-    unique_routes: list[BatchCheckRouteOutcome] = []
-    convergence: dict[int, list[int]] = {}
-    sources: dict[int, list[tuple[int, CheckedRouteFact]]] = {}
-    seen_routes: dict[str, int] = {}
+    unique_routes = []
+    owners = {}
+    sources = {}
+    convergence = {}
     for route in route_outcomes:
-        if not route.outcome.checked_routes:
-            unique_routes.append(route)
-            continue
-        fact = route.outcome.checked_routes[0]
-        fingerprint = json.dumps(
-            _thaw_json(fact.semantic_chain),
-            ensure_ascii=False,
-            sort_keys=True,
-            separators=(",", ":"),
-        )
-        existing = seen_routes.get(fingerprint)
-        if existing is not None:
-            sources[existing].append((route.route_index, fact))
-            convergence.setdefault(existing, [unique_routes[existing].route_index]).append(
-                route.route_index,
-            )
-            continue
-        seen_routes[fingerprint] = len(unique_routes)
-        sources[len(unique_routes)] = [(route.route_index, fact)]
-        unique_routes.append(route)
-    sections.extend(
-        _render_route(route, choice_value_labels, outcome_renderer, {
-            route.outcome.checked_routes[0].label: sources[index],
-        } if route.outcome.checked_routes else None)
-        for index, route in enumerate(unique_routes)
-    )
-    sections.extend(
-        "输入路线 " + "、".join(str(index) for index in indexes)
-        + " 收敛为上方同一条完整权威路线，只保留一个短 ID。"
-        for unique_index, indexes in convergence.items()
-        if unique_routes[unique_index].outcome.checked_routes
-    )
-    valid_routes = [
-        route
-        for route in unique_routes
-        if route.outcome.checked_routes
-    ]
-    ready_refs = [f"R{route.route_index}.C1" for route in valid_routes]
+        unique_facts = []
+        for fact in route.outcome.checked_routes:
+            fingerprint = json.dumps(_thaw_json(fact.semantic_chain), ensure_ascii=False, sort_keys=True)
+            owner = owners.get(fingerprint)
+            if owner is None:
+                owner = fact.label
+                owners[fingerprint] = owner
+                unique_facts.append(fact)
+            else:
+                if any(index != route.route_index for index, _ in sources[owner]):
+                    convergence.setdefault(owner, set()).add(route.route_index)
+            if not any(index == route.route_index for index, _ in sources.get(owner, [])):
+                sources.setdefault(owner, []).append((route.route_index, fact))
+        if unique_facts or not route.outcome.checked_routes:
+            unique_routes.append(replace(route, outcome=replace(route.outcome, checked_routes=tuple(unique_facts))))
+    sections.extend(_render_route(route, choice_value_labels, outcome_renderer, sources) for route in unique_routes)
+    for label, indexes in convergence.items():
+        indexes.update(index for index, _ in sources[label])
+        sections.append("输入路线 " + "、".join(str(index) for index in sorted(indexes))
+                        + " 收敛为上方同一条完整权威路线，共用一个编号。")
+    ready_refs = [fact.label for route in unique_routes for fact in route.outcome.checked_routes]
     failed_count = sum(not route.outcome.ok for route in route_outcomes)
-    binding_note = (
-        "可提交显示路线：" + "、".join(ready_refs) + "。"
-        if ready_refs
-        else "当前各组都没有可提交显示路线。"
-    )
-    partial_note = (
-        f"其中 {failed_count} 个路线组参数或语义无效；它们没有标签，也不会使其他"
-        "已显示路线失效。"
-        if failed_count
-        else "所有路线组均已独立校验。"
-    )
-    sections.extend(
-        [
-            "候选接近度不代表策略优劣。",
-            partial_note,
-            binding_note,
-            "组号和参考号不能作为 commit.id。",
-        ]
-    )
+    sections.extend([
+        "候选接近度不代表策略优劣。",
+        f"其中 {failed_count} 个路线组参数或语义无效；其余已显示路线仍有效。" if failed_count else "所有路线组均已独立校验。",
+        "可提交显示路线：" + "、".join(ready_refs) + "。" if ready_refs else "当前各组都没有可提交显示路线。",
+        "组号和参考号不能作为 commit.id。",
+    ])
     return "\n\n".join(sections)
 
 
@@ -244,12 +215,13 @@ def render_compact_batch_failures(
         )
         detail = f"；{public.detail}" if public.detail else ""
         lines.append(
-            f"输入路线 {route.route_index} 无效：{public.code}；"
+            f"输入草稿 {route.route_index} 无效：{public.code}；"
             f"{public.message}{detail}"
         )
     if lines:
         lines.append(
-            "若仍想比较这些路线，只修正上述字段后重新 Check；"
+            "上述输入草稿序号不是可提交编号，其他已返回候选仍有效。"
+            "若仍想比较这些草稿，只修正上述字段后重新 Check；"
             "不要重算已经成功返回的路线。"
         )
     return "\n".join(lines)
@@ -276,18 +248,17 @@ class BatchCheckHandler:
                     decision_id=request.decision_id,
                     state_hash=request.state_hash,
                 )
-                outcome = CheckHandler(self._descriptor).handle(single_request, ports)
-                # A batch already represents the model's two or three competing
-                # routes.  Returning up to five repairs for every route creates
-                # as many as fifteen model-visible choices and exceeds the shared
-                # Tool-result budget.  Preserve the closest Authority result for
-                # each submitted route; single-route Check retains its C1-C5
-                # repair surface.
+                outcome = CheckHandler(
+                    self._descriptor,
+                    candidate_limit=3,
+                    result_limit=BATCH_CHECK_RESULT_LIMIT,
+                ).handle(single_request, ports)
+                # Keep the existing search scope; expose two results per input.
                 if outcome.candidates or outcome.checked_routes:
                     outcome = replace(
                         outcome,
-                        candidates=outcome.candidates[:1],
-                        checked_routes=outcome.checked_routes[:1],
+                        candidates=outcome.candidates[:BATCH_CHECK_RESULT_LIMIT],
+                        checked_routes=outcome.checked_routes[:BATCH_CHECK_RESULT_LIMIT],
                     )
                 if outcome.normalization_events:
                     outcome = replace(
@@ -340,9 +311,9 @@ class BatchCheckHandler:
             for route in frozen_outcomes
             for fact in route.outcome.checked_routes
         )
-        if len(checked_routes) > 3:
+        if len(checked_routes) > BATCH_CHECK_RESULT_LIMIT * len(request.chains):
             raise RuntimeError(
-                "batch check produced more than one checked route per input route"
+                "batch check exceeded its checked-route result limit per input"
             )
         failed = [route for route in frozen_outcomes if not route.outcome.ok]
         return BatchCheckOutcome(

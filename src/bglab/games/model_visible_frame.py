@@ -39,6 +39,12 @@ CURRENT_ACTIONS_HEADING = (
     "Currently available starting actions "
     "(later choices belong to the same complete decision)"
 )
+NEXT_DECISION_HEADING = "Current task"
+NEXT_DECISION_GUIDANCE = (
+    "请基于当前局面分析并完成本次行动，路线包含本次解锁的奖励和后续选择，"
+    "不要只写起始动作，也不延伸到未来回合。"
+    "有不确定之处可以 Check；路线已经确定且选择完整，就直接 Commit。"
+)
 
 
 _ALLOWED_FACT_KINDS = frozenset({
@@ -211,6 +217,10 @@ def render_model_visible_frame(frame: Mapping[str, Any]) -> str:
         f"- actorSeat={frame['actorSeat']}",
     ]
     for fact in frame.get("facts", ()):
+        # Stable visibility guidance lives in the game prompt/session head.
+        # Package facts about a specific unknown remain visible under their own IDs.
+        if fact.get("id") == "information-boundaries":
+            continue
         lines.extend(["", f"## {fact['title']} [{fact['kind']}]"])
         if "data" in fact:
             data = fact["data"]
@@ -232,7 +242,6 @@ def render_model_visible_frame(frame: Mapping[str, Any]) -> str:
             lines.extend(f"- {item}" for item in fact.get("lines", ()))
     for key, heading in (
         ("seatPrivateState", "Seat-authorized state"),
-        ("currentActions", CURRENT_ACTIONS_HEADING),
         ("dynamicScoring", "Current scoring facts"),
     ):
         value = frame.get(key)
@@ -247,11 +256,14 @@ def render_model_visible_frame(frame: Mapping[str, Any]) -> str:
                     separators=(",", ":"),
                 ),
             ])
+    lines.extend(["", f"## {NEXT_DECISION_HEADING}", NEXT_DECISION_GUIDANCE])
     return "\n".join(lines)
 
 
 __all__ = [
     "CURRENT_ACTIONS_HEADING",
+    "NEXT_DECISION_HEADING",
+    "NEXT_DECISION_GUIDANCE",
     "CURRENT_ONLY_EVAL_PROFILE",
     "ModelFrameProjectionProfile",
     "ModelVisibleFrameError",

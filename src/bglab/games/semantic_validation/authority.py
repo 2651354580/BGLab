@@ -784,9 +784,14 @@ def search_projected_authority_primary(
     page_size: int = 20,
     max_pages: int = 20,
     max_validation_calls: int = 128,
+    candidate_limit: int | None = None,
 ) -> AuthorityClosestEnvelope:
     """Rank the current legal route language by full-chain global distance."""
     del min_facts
+    if candidate_limit is not None and candidate_limit not in (3, 5):
+        raise ValueError("Check candidate limit must be 3 or 5")
+    requested_limit = candidate_limit or 5
+    best_envelope = None
     compilation = compile_semantic_chain(
         worker,
         descriptor,
@@ -817,13 +822,14 @@ def search_projected_authority_primary(
             enumeration_complete=False,
             pages=0,
         )
-        return AuthorityClosestEnvelope(
+        best_envelope = AuthorityClosestEnvelope(
             search=find_closest_programs(
                 submitted,
                 authority.programs,
                 decision_id=decision_id,
                 state_hash=state_hash,
                 action_roles=descriptor.action_roles,
+                limit=requested_limit,
             ),
             authority=authority,
             requested_facts=compilation.requested_facts,
@@ -832,6 +838,9 @@ def search_projected_authority_primary(
             search_mode="validated_route_automaton",
             compilation=compilation,
         )
+
+        if candidate_limit is None or len(best_envelope.search.candidates) >= requested_limit:
+            return best_envelope
 
     validated_prefix = (
         tuple(
@@ -923,6 +932,7 @@ def search_projected_authority_primary(
             decision_id=decision_id,
             state_hash=state_hash,
             action_roles=descriptor.action_roles,
+            limit=requested_limit,
             collapse_choice_values_for_kinds=(
                 descriptor.collapse_choice_values_for_kinds
             ),
@@ -934,7 +944,7 @@ def search_projected_authority_primary(
             enumeration_complete=True,
             pages=1 + len(hydrated),
         )
-        return AuthorityClosestEnvelope(
+        prefix_envelope = AuthorityClosestEnvelope(
             search=search,
             authority=prefix_authority,
             requested_facts=compilation.requested_facts,
@@ -943,6 +953,13 @@ def search_projected_authority_primary(
             search_mode="complete_prefix_semantic_automaton",
             compilation=compilation,
         )
+        if best_envelope is None or len(search.candidates) >= len(best_envelope.search.candidates):
+            best_envelope = prefix_envelope
+        if candidate_limit is None or len(search.candidates) >= requested_limit:
+            return prefix_envelope
+    if best_envelope is not None:
+        return best_envelope
+
     if bool(getattr(worker, "supports_complete_prefix_subgraph", False)) and validated_prefix:
         repaired_programs = _compile_nearby_routes(
             worker,

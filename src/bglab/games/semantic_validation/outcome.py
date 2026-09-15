@@ -3,14 +3,11 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 
-MAX_RENDER_CHARS = 600
-
-
 def validate_public_summary(value: object, *, required: bool = False) -> str | None:
     if value is None and not required:
         return None
-    if not isinstance(value, str) or not value.strip() or len(value) > MAX_RENDER_CHARS:
-        raise ValueError("publicSummary must be non-empty text of at most 600 characters")
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("publicSummary must be non-empty text")
     return value
 
 

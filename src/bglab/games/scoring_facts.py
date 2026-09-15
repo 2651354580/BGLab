@@ -197,8 +197,9 @@ def project_scoring_decision_facts(facts: Mapping[str, Any]) -> dict[str, Any]:
                 "cost": copy.deepcopy(
                     raw.get("effectiveCost", raw.get("rawCost", {})),
                 ),
-                "gap": copy.deepcopy(raw.get("remainingGap", {})),
             }
+            if "remainingGap" in raw:
+                target["gap"] = copy.deepcopy(raw["remainingGap"])
             if raw.get("rawCost") != raw.get("effectiveCost"):
                 target["rawCost"] = copy.deepcopy(raw.get("rawCost", {}))
             if "affordableNow" in raw:
@@ -275,9 +276,11 @@ def render_scoring_decision_facts(facts: Mapping[str, Any]) -> str:
             f"id={target['id']}",
             f"action={target['actionFamily']}",
             f"cost={_resource_text(target.get('effectiveCost'))}",
-            f"available={_resource_text(target.get('spendable'))}",
-            f"gap={_resource_text(target.get('remainingGap'))}",
         ]
+        if "spendable" in target:
+            details.append(f"available={_resource_text(target['spendable'])}")
+        if "remainingGap" in target:
+            details.append(f"gap={_resource_text(target['remainingGap'])}")
         if "affordableNow" in target:
             details.append(
                 f"affordableNow={'yes' if target['affordableNow'] else 'no'}",

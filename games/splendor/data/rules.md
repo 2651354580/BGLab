@@ -33,7 +33,7 @@ After applying those discounts, choose which tokens to spend. Gold can substitut
 
 ### Nobles
 
-A noble visits automatically when card discounts meet its requirements. Each noble is worth 3 points. At most one noble is awarded at the end of a turn. If several nobles are eligible, the active player chooses exactly one. After a market purchase, refill the market slot before making that choice; a reserved-card purchase does not refill the market.
+A noble visits automatically when card discounts meet its requirements. Each noble is worth 3 points. At most one noble is awarded at the end of a turn, after any required token discard. This applies after taking gems and reserving cards as well as buying cards: eligible nobles left over from a previous turn remain eligible. If several nobles are eligible, the active player chooses exactly one. After a market purchase, refill the market slot before making that choice; a reserved-card purchase does not refill the market.
 
 ### Win condition
 

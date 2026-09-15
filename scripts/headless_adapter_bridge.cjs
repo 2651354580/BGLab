@@ -32,9 +32,12 @@ function presentOutcome(result) {
   if (!result || typeof result !== 'object' || typeof adapter.renderPublicOutcome !== 'function') return result;
   const presented = {...result};
   if (result.outcome && Object.keys(result.outcome).length) {
-    const summary = adapter.renderPublicOutcome(result.outcome);
-    if (typeof summary !== 'string' || !summary.trim() || [...summary].length > 600) {
-      throw new Error('publicSummary must be non-empty text of at most 600 characters');
+    // A package may derive detailed presentation while validating its clone.
+    // Keep this optional display metadata out of outcome and route identity.
+    const summary = Object.prototype.hasOwnProperty.call(result, 'publicSummary')
+      ? result.publicSummary : adapter.renderPublicOutcome(result.outcome);
+    if (typeof summary !== 'string' || !summary.trim()) {
+      throw new Error('publicSummary must be non-empty text');
     }
     presented.publicSummary = summary;
   }

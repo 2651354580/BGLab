@@ -51,6 +51,14 @@ PROVIDERS: tuple[ProviderSpec, ...] = (
             ModelSpec("deepseek-chat", "DeepSeek Chat"),
             ModelSpec("deepseek-reasoner", "DeepSeek Reasoner"),
             ModelSpec(
+                "deepseek-flash",
+                "DeepSeek V4.1 Flash",
+                context_window_tokens=1_000_000,
+                tool_reasoning_roundtrip=True,
+                explicit_thinking=True,
+                thinking_effort="high",
+            ),
+            ModelSpec(
                 "deepseek-v4-flash",
                 "DeepSeek V4 Flash",
                 context_window_tokens=1_000_000,

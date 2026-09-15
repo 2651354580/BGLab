@@ -91,7 +91,10 @@ class AdapterProcess:
         return self.request("start", config=config)
 
     def restore(self, snapshot: dict) -> dict:
-        return self.request("restore", snapshot=snapshot)
+        # Actor views are derived host metadata, never part of engine authority.
+        # Replay records may carry one; regenerate it after restoring the state.
+        authority = {key: value for key, value in snapshot.items() if key != "adapterView"}
+        return self.request("restore", snapshot=authority)
 
     def snapshot(self) -> dict:
         return self.request("snapshot")

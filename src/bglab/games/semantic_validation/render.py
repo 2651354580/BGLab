@@ -126,7 +126,7 @@ def _checked_route_scope(facts: Sequence[CheckedRouteFact]) -> str:
     if not facts:
         return DISCLAIMER
     if not any(fact.intent_exact for fact in facts):
-        return "原提交的意图没有被下列候选完整保留。以下是改变了原选择的完整合法路线；差异逐项列出，不代表建议你采用。"
+        return "原提交的意图没有被下列候选完整保留。以下是改变了原选择的完整合法路线；各候选注明首次不同选择，不代表建议你采用。"
     if any(fact.status == "needs-choice" and fact.intent_exact for fact in facts):
         return "已返回保留原意图的完整合法路线，其中补出的玩家选择需要你确认。其他候选的修正另列；顺序不代表策略优劣。"
     return "已返回与原意图一致的完整合法路线。其他候选如有修正会另列；顺序不代表策略优劣。"
@@ -278,7 +278,7 @@ def _fact_authority_boundary(fact: CheckedRouteFact) -> str | None:
     if fact.status in {"nearby", "distant"}:
         return (
             f"权威说明：{text}这只描述原提交；"
-            f"{fact.label} 本身是完整合法路线，可直接依据本轮短 ID 提交。"
+            f"{fact.label} 本身是完整合法路线，可直接依据本轮路线编号提交。"
         )
     return f"权威边界：{text}"
 
@@ -320,9 +320,28 @@ def render_checked_route_facts(
         boundary = _fact_authority_boundary(fact)
         if boundary is not None:
             lines.append(boundary)
-        lines.append(f"结果：{' '.join(outcome.split())[:600] or '无公开变化。'}")
+        lines.append(f"结果：{outcome.strip() or '无公开变化。'}")
         sections.append("\n".join(lines))
     return "\n\n".join(sections)
+
+
+def _first_choice_note(
+    fact: CheckedRouteFact,
+    choice_value_labels: Mapping[str, Mapping[str, str]] | None,
+) -> str:
+    chain = _fact_chain(fact.semantic_chain)
+    divergence = fact.first_divergence
+    if not isinstance(divergence, Mapping) or divergence.get("code") == DivergenceCode.EXACT.value:
+        return "与提交路线一致" if fact.status == "exact" else _CHECKED_ROUTE_STATUS_ZH.get(fact.status, fact.status)
+    prefix = ""
+    if 0 < fact.matched_prefix <= len(chain.actions):
+        previous = chain.actions[fact.matched_prefix - 1]
+        prefix = _render_compact_semantic_action(previous, choice_value_labels=choice_value_labels) + "后，"
+    next_action = divergence.get("candidateNext")
+    if isinstance(next_action, Mapping):
+        action = _fact_chain({"actions": [next_action]}).actions[0]
+        return prefix + "本路线选择" + _render_compact_semantic_action(action, choice_value_labels=choice_value_labels)
+    return prefix + "本路线结束"
 
 
 def render_compact_checked_route_facts(
@@ -339,86 +358,24 @@ def render_compact_checked_route_facts(
         raise ValueError("unsupported checked-route locale")
     if any(not isinstance(fact, CheckedRouteFact) for fact in facts):
         raise TypeError("checked-route renderer accepts CheckedRouteFact values only")
-    render_outcome = outcome_renderer or render_public_outcome
     sections = [_checked_route_scope(facts)]
     for fact in facts:
-        status = _CHECKED_ROUTE_STATUS_ZH.get(fact.status, fact.status)
-        prefix = (
-            f"；前{fact.matched_prefix}步一致"
-            if fact.first_divergence is not None
-            else ""
+        chain = _fact_chain(fact.semantic_chain)
+        sources = source_facts.get(fact.label, ()) if source_facts else ()
+        note = (
+            "；".join(f"输入路线{index}：{_first_choice_note(source, choice_value_labels)}" for index, source in sources)
+            if len(sources) > 1 else _first_choice_note(fact, choice_value_labels)
         )
-        lines = [
-            f"[{fact.label}] {status}{prefix}",
-            "路线：" + _render_compact_semantic_chain(
-                _fact_chain(fact.semantic_chain),
-                choice_value_labels=choice_value_labels,
-            ),
-        ]
-        divergence = fact.first_divergence
-        intent_lines = _intent_change_lines(fact, choice_value_labels, source_facts)
-        if intent_lines:
-            lines.extend(intent_lines)
-        elif isinstance(divergence, Mapping):
-            divergence_code = str(divergence.get("code", ""))
-            submitted = divergence.get("submittedNext")
-            candidate = divergence.get("candidateNext")
-            submitted_text = (
-                _render_compact_semantic_action(
-                    _fact_chain({"actions": [submitted]}).actions[0],
-                    choice_value_labels=choice_value_labels,
-                )
-                if isinstance(submitted, Mapping)
-                else "结束"
-            )
-            candidate_text = (
-                _render_compact_semantic_action(
-                    _fact_chain({"actions": [candidate]}).actions[0],
-                    choice_value_labels=choice_value_labels,
-                )
-                if isinstance(candidate, Mapping)
-                else "结束"
-            )
-            if divergence_code == DivergenceCode.CANDIDATE_INSERTED_ACTION.value:
-                lines.append(
-                    f"候选补全：前{fact.matched_prefix}步一致；该候选随后选择 {candidate_text}。"
-                    "这只是一个可提交分支，不代表该选择必须执行或更优。"
-                )
-            elif divergence_code == DivergenceCode.SUBMITTED_ACTION_OMITTED.value:
-                lines.append(
-                    f"重要修正：原输入要求 {submitted_text}，但合法路线不执行这一步；"
-                    "候选也不会获得该动作预期的选择或收益。"
-                )
-            elif (
-                divergence_code == DivergenceCode.ACTION_CHANGED.value
-                and candidate_text == "finish_action"
-            ):
-                lines.append(
-                    f"重要修正：原输入要求 {submitted_text}，但当前路线没有这个选择并在此结束；"
-                    "候选不会获得该选择预期的收益。"
-                )
-            elif divergence_code == DivergenceCode.ARGUMENT_CHANGED.value:
-                lines.append(
-                    f"字段修正：原输入 {submitted_text}；合法路线使用 {candidate_text}。"
-                )
-            else:
-                lines.append(
-                    f"路线修正：保留前{fact.matched_prefix}步；原输入 {submitted_text}；"
-                    f"合法路线改为 {candidate_text}。"
-                )
-        outcome = (
-            render_outcome(fact.outcome) if outcome_renderer is not None
-            else fact.public_summary if fact.public_summary is not None
-            else render_public_outcome(fact.outcome)
-        )
+        lines = [f"[{fact.label}] 合法候选（{note}）",
+                 "路线：" + _render_compact_semantic_chain(chain, choice_value_labels=choice_value_labels)]
+        outcome = (outcome_renderer(fact.outcome) if outcome_renderer is not None
+                   else fact.public_summary if fact.public_summary is not None
+                   else render_public_outcome(fact.outcome))
         if not isinstance(outcome, str):
             raise ValueError("outcome renderer must return text")
         if fact.outcome.get("unexecutedActionAbandoned") is True:
-            lines.append(
-                "重要：finish_action 会立即放弃本路线已解锁但未执行的行动；"
-                "下方收益不包含该行动。"
-            )
-        lines.append(f"收益：{' '.join(outcome.split())[:600] or '无公开变化。'}")
+            lines.append("finish_action 放弃未执行的行动；结算不包含该行动的奖励。")
+        lines.append(outcome.strip() or "无公开变化。")
         sections.append("\n".join(lines))
     return "\n\n".join(sections)
 
@@ -791,7 +748,7 @@ def render_closest_result(
                 outcome = outcome_renderer(candidate.program.outcome)
                 if not isinstance(outcome, str):
                     raise ValueError("outcome renderer must return text")
-                compact = " ".join(outcome.split())[:600]
+                compact = outcome.strip()
                 lines.append(f"结果：{compact or '无公开变化。'}")
     lines.extend(["", UNCOMMITTED_STATUS])
     return "\n".join(lines)

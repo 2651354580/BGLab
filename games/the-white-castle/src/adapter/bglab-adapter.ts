@@ -33,7 +33,10 @@ import {
 } from "./scoring-frame";
 import { buildOpportunityFrameData } from "./opportunity-frame";
 import { buildMinimalBoardFrame } from "./minimal-board-frame";
+import { buildRoundEndBoardFacts } from "./round-end-frame";
+import { buildSetupFrame } from "./setup-frame";
 import { renderPublicOutcome } from "./public-outcome";
+import { buildCheckSettlement, renderCheckSettlement, type SettlementTransition } from "./check-settlement";
 import { semanticChoiceKindForEngineStep } from "./semantic-choice";
 import { describeCastleRowSelection } from "./effect-labels";
 import { createRequire } from "node:module";
@@ -197,9 +200,10 @@ export type TransactionValidationResult = Omit<DispatchResult, "nextActions" | "
   endNowScoreDelta?: number;
   scoringEngineChanges?: Array<Record<string, unknown>>;
   outcome?: Record<string, unknown>;
+  publicSummary?: string;
 };
 
-export type TurnProgram = { programId: string; decisionId: string; rootId: string; boundaryReason: string; termination?: string; steps: ActionStep[]; causalTrace: Array<{ step: number; actionStep?: number; source: string; effect: string; majorAction?: string; choiceType?: string; choiceSource?: string; delta?: Record<string, number>; enables?: string[] }>; outcome: Record<string, unknown>; netOutcome: Record<string, unknown>; factualCosts: Record<string, number>; factualGains: Record<string, number>; immediateEffects: string[]; immediateScoreDelta: number; endNowScoreDelta: number; scoringEngineChanges: Array<Record<string, unknown>>; complete: true; stateKeys: string[] };
+export type TurnProgram = { publicSummary?: string; programId: string; decisionId: string; rootId: string; boundaryReason: string; termination?: string; steps: ActionStep[]; causalTrace: Array<{ step: number; actionStep?: number; source: string; effect: string; majorAction?: string; choiceType?: string; choiceSource?: string; delta?: Record<string, number>; enables?: string[] }>; outcome: Record<string, unknown>; netOutcome: Record<string, unknown>; factualCosts: Record<string, number>; factualGains: Record<string, number>; immediateEffects: string[]; immediateScoreDelta: number; endNowScoreDelta: number; scoringEngineChanges: Array<Record<string, unknown>>; complete: true; stateKeys: string[] };
 export type OutcomeIndex = Record<string, unknown> & {
   decisionId: string;
   seat: number;
@@ -870,175 +874,33 @@ export class WhiteCastleBGLabAdapter {
       data:{ options:clone(semanticOptions) },
     };
     if (this.state.phase === "setup") {
-      const setupHasLaterActor = this.state.setupIndex + 1 < this.state.setupOrder.length;
-      const setupSuccessorPhase = setupHasLaterActor ? "setup" : "draft";
-      const setupSuccessorActor = setupHasLaterActor
-        ? this.state.setupOrder[this.state.setupIndex + 1]
-        : this.state.turnOrder[0];
-      const setupSemanticAction = (action: GameAction): string => {
-        if (action.type === "chooseStartingPair") {
-          return `choose_starting_pair(offer=${action.offer})`;
-        }
-        if (action.type === "chooseEffectOption") {
-          return `choose_reward(kind=starting_resource, choice=${action.option})`;
-        }
-        return "authority_choice";
+      // Display only: complete scoring remains in the engine and decisionFacts.
+      const scoringDecisionFacts = clone(decisionFacts.scoringDecisionFacts) as Record<string, unknown>;
+      const score = scoringDecisionFacts.score as {
+        components:Array<{ id:string }>;
+        rules:Array<{ ruleId:string }>;
       };
-      const setupOffers = this.state.startingOffers.map((offer, index) => {
-        const resourceCard = startingResourceCard(offer.resourceCard);
-        const actionCard = startingActionCard(offer.actionCard);
-        const projectedPlayer = clone(player);
-        for (const [resource, amount] of Object.entries(resourceCard.resources)) {
-          const key = resource as keyof typeof projectedPlayer.resources;
-          const cap = key === "coins" ? Number.POSITIVE_INFINITY : 7;
-          projectedPlayer.resources[key] = Math.min(
-            cap,
-            projectedPlayer.resources[key] + Number(amount),
-          );
-        }
-        const choiceScores: number[] = [];
-        const choiceCount = resourceCard.choiceResources ?? 0;
-        const choiceResources = ["food", "iron", "pearl"] as const;
-        const enumerateChoiceScores = (remaining: number, candidate: typeof projectedPlayer): void => {
-          if (remaining === 0) {
-            choiceScores.push(scoreResources(candidate));
-            return;
-          }
-          for (const resource of choiceResources) {
-            const next = clone(candidate);
-            next.resources[resource] = Math.min(7, next.resources[resource] + 1);
-            enumerateChoiceScores(remaining - 1, next);
-          }
-        };
-        enumerateChoiceScores(choiceCount, projectedPlayer);
-        const resourceScoreMin = Math.min(...choiceScores);
-        const resourceScoreMax = Math.max(...choiceScores);
-        const installedAction = actionCard.effect.type === "majorAction"
-          ? actionCard.effect.action
-          : "none";
-      const installedActionMeaning: Record<string, string> = {
-          courtier:"when a later route triggers it, opens the courtier window: recruit costs 2 coins; promote one level costs 2 pearl or two levels costs 5 pearl; final location scores at game end",
-          gardener:"when a later route triggers it, opens one gardener deployment; public garden food costs range from 1 to 5; occupied gardens score at game end and may reactivate at round end",
-          warrior:"when a later route triggers it, opens one warrior deployment; public yard iron costs are 1, 3, or 5; final warrior score uses yard value times final castle-courtier count",
-        };
-        return (
-          `offer=${index}; available=${offer.claimedBy === null}; claimedBy=${offer.claimedBy ?? "none"}; `
-          + `resourceCard=${resourceCard.materialId}; resources=${JSON.stringify(resourceCard.resources)}; `
-          + `choiceResources=${resourceCard.choiceResources ?? 0}; decree=${resourceCard.decree ?? "none"}; `
-          + `choiceResourceOptions=${choiceCount > 0 ? '["food","iron","pearl"]' : "none"}; `
-          + `choiceResourceOptionIds=${choiceCount > 0 ? "[0=food,1=iron,2=pearl]" : "none"}; `
-          + `lanternFutureEffect=${describePublicEffects(resourceCard.lantern)}; `
-          + `decreeFutureEffect=${resourceCard.decree ? describePublicEffects(DECREE_CARDS[resourceCard.decree]) : "none"}; `
-          + `installedLanternTiming=future lantern resolutions, not setup immediate; `
-          + `resourceScoreIfGameEndedAfterSetupChoice=${resourceScoreMin === resourceScoreMax ? resourceScoreMin : `${resourceScoreMin}..${resourceScoreMax}`}; `
-          + `actionCard=${actionCard.materialId}; installs action family=${installedAction}; `
-          + `installedActionMeaning=${installedActionMeaning[installedAction] ?? "none"}`
-        );
-      });
+      score.components = score.components.filter(component => component.id !== "resources");
+      score.rules = score.rules.filter(rule => rule.ruleId !== "resources");
+      // These are future destinations, not actions executable in setup. Their
+      // costs/rewards remain useful, but the unchosen offer is not in the balance.
+      for (const target of scoringDecisionFacts.scoringTargets as Array<Record<string, unknown>>) {
+        delete target.spendable;
+        delete target.remainingGap;
+        delete target.affordableNow;
+      }
+      if (legal.some(action => action.type === "chooseStartingPair")
+        && Object.values(player.resources).every(amount => amount === 0)) {
+        delete (scoringDecisionFacts.currentState as Record<string, unknown>).resources;
+      }
       return {
         schemaVersion:"natural-decision-surface-v2",
         currentActions,
-        modelFacts:{
-          version:1,
-          coverage:"complete-current-decision",
-          phaseScope:"setup",
-          facts:[
-            {
-              kind:"TurnFact", id:"setup-turn", title:"Setup turn",
-              data:{
-                lines:[
-                  `Current setup choice is happening now; actor=P${seat} must choose exactly one available offer from this Frame.`,
-                  `Global setup pick=${this.state.setupIndex + 1} of ${this.state.setupOrder.length}; reverse setup order has already been applied by the Engine. All offers marked available=true are selectable now; do not wait for another seat before choosing.`,
-                  "Choosing an offer grants only its listed immediate resources now; resolve any listed resource choice before setup advances. Lantern and decree effects are installed for future lantern resolutions and grant nothing during setup. The action card is installed for later and does not execute its member action during setup; a later die, workspace, or reward must trigger that action.",
-                  `After this offer and any resource choices finish: successorPhase=${setupSuccessorPhase}; nextActor=P${setupSuccessorActor}.`,
-                ],
-              },
-            },
-            {
-              kind:"ResourceSnapshot", id:"setup-actor", title:"Actor resources",
-              data:{
-                resources:clone(player.resources),
-                influence:player.influence,
-                points:player.points,
-              },
-            },
-            {
-              ...currentSemanticOptionsFact,
-              data:{ options:semanticOptions.map((option) => {
-                const { boundary, ...choice } = clone(option);
-                const { actorSeat, status, ...details } = boundary;
-                return {
-                  ...choice,
-                  availableNow:true,
-                  afterThisChoice:{
-                    decisionStatus:status,
-                    ...(actorSeat === undefined ? {} : { nextActorSeat:actorSeat }),
-                    ...details,
-                  },
-                };
-              }) },
-            },
-            {
-              kind:"CurrentTargetFact", id:"setup-options", title:"Starting offers",
-              data:{
-                semanticActions:currentActions,
-                offers:this.state.startingOffers.map((offer, index) => ({
-                  offer:index,
-                  available:offer.claimedBy === null,
-                  claimedBy:offer.claimedBy,
-                  resourceCard:startingResourceFacts(offer.resourceCard),
-                  actionCard:clone(startingActionCard(offer.actionCard)),
-                })),
-                pendingEffect:this.state.pendingEffects.length === 0
-                  ? null
-                  : describePublicEffects(this.state.pendingEffects[0].effect),
-              },
-            },
-          ],
-        },
-        narrativeSections:[
-          {
-            id:"setup-turn",
-            title:"初始设置与行动者",
-            lines:[
-              `round ${this.state.round}/3; turn ${this.state.turn}; phase setup; actor seat ${seat} (${player.name})`,
-              `global setup pick ${this.state.setupIndex + 1}/${this.state.setupOrder.length}; each seat chooses exactly one starting pair in setupOrder, so the current seat will not choose a second pair during setup.`,
-              `successorBoundary=after the chosen offer and all pending setup resource choices; successorPhase=${setupSuccessorPhase}; nextActorSeat=${setupSuccessorActor}.`,
-            ],
-          },
-          {
-            id:"setup-actions",
-            title:"当前合法初始设置行动",
-            lines:[
-              `semantic action family=${legal.some((action) => action.type === "chooseStartingPair") ? "choose_starting_pair" : "choose_reward"}`,
-              ...legal.map((action) => `semantic action=${setupSemanticAction(action)}`),
-              `pending choice=${this.state.pendingEffects.length === 0 ? "none" : describePublicEffects(this.state.pendingEffects[0].effect)}`,
-            ],
-          },
-          {
-            id:"setup-offers",
-            title:"公开初始组合",
-            lines:setupOffers,
-          },
-          {
-            id:"setup-rules",
-            title:"初始组合结算规则",
-            lines:[
-              "Choose exactly one available starting pair.",
-              "Each seat chooses exactly once; the setup numerator/denominator counts global seat picks, not multiple picks for the current seat.",
-              "The resource card grants its listed resources now; resolve any listed resource choice before setup advances.",
-              "resourceScoreIfGameEndedAfterSetupChoice is a hypothetical if-ended resource-score component; it is never immediate points granted during setup.",
-              "Lantern and decree icons are installed for future lantern resolutions; they do not grant their printed effect during the setup choice itself.",
-              "The action card installs that family action on the personal board and does not execute that family action during setup.",
-              "An installed family action is not a standalone main action: a later authoritative die/workspace/reward route must explicitly trigger that family before it can be used.",
-              "Only the current legal action entries belong in this setup DecisionFrame; dice drafting and placement begin after every player finishes setup.",
-            ],
-          },
-        ],
-        scoringDecisionFacts:clone(decisionFacts.scoringDecisionFacts),
+        ...buildSetupFrame(this.state, seat, describePublicEffects),
+        scoringDecisionFacts,
         informationBoundaries:[
-          "Effects and choices not present in this surface are unknown until authority execution.",
-          "This surface contains facts only; it does not rank or recommend an offer.",
+          "Public board facts below describe future play; only the opening choices are executable in setup.",
+          "Unrevealed future cards and dice are unknown. No offer is ranked or recommended.",
         ],
       };
     }
@@ -1124,21 +986,15 @@ export class WhiteCastleBGLabAdapter {
                 nextRoundFirstActorSeat:this.state.round < 3
                   ? this.state.turnOrder[0]
                   : null,
-              },
-            },
-            {
-              kind:"ResourceSnapshot", id:"round-end-actor", title:"Actor state",
-              data:{
-                resources:clone(player.resources),
-                influence:player.influence,
-                points:player.points,
-                scoreIfEndedNow:clone(actorScore),
+                task:"Resolve all pending gardens and their unlocked choices for this owner; no new die draft. The next round starts after all owners finish.",
               },
             },
             currentSemanticOptionsFact,
             {
               kind:"CurrentTargetFact", id:"round-end-options", title:"Round-end choices",
              data:{
+               activation:"Each pending garden repeats its printed reward once. Do not repay its original placement food or award its printed garden points again. Pay only costs explicitly printed inside the reward; a new gardener deployment unlocked by that reward pays its own placement food.",
+               choiceNumbering:"round_end_garden_order choices are recalculated after each selection; when one garden remains its choice is 0.",
                semanticActions:currentActions,
                pendingGardens:pendingGardenIds.map((gardenId) => {
                  const garden = this.state.gardens.find((item) => item.id === gardenId);
@@ -1152,6 +1008,7 @@ export class WhiteCastleBGLabAdapter {
                immediateFollowUps:followupLines,
              },
            },
+           ...buildRoundEndBoardFacts(this.state,seat,describePublicEffects),
           ],
         },
         narrativeSections:[
@@ -3421,6 +3278,7 @@ export class WhiteCastleBGLabAdapter {
       steps,
       causalTrace:clone(validation.causalTrace ?? []),
       outcome:clone(validation.outcome ?? {}),
+      publicSummary:validation.publicSummary,
       netOutcome:clone(validation.outcome ?? {}),
       factualCosts:clone(validation.factualCosts ?? {}),
       factualGains:clone(validation.factualGains ?? {}),
@@ -4007,6 +3865,7 @@ export class WhiteCastleBGLabAdapter {
         });
       }
     };
+    const settlementTrace:SettlementTransition[] = [];
     const validatedPrefix: ActionStep[] = [clone(requested.steps[0])];
     for (let index = 1; index < requested.steps.length; index += 1) {
       try {
@@ -4016,6 +3875,7 @@ export class WhiteCastleBGLabAdapter {
         }
         const action = stepToAction(step);
         const transition = applyAction(candidate, action);
+        settlementTrace.push({before:candidate,after:transition.state,action,events:transition.events});
         appendCausalEvents(
           this.causalTraceForAction(candidate, action, transition.events),
           index,
@@ -4046,6 +3906,7 @@ export class WhiteCastleBGLabAdapter {
       seen.add(stateKey);
       const actionStep = validatedPrefix.length;
       const transition = applyAction(candidate, action);
+      settlementTrace.push({before:candidate,after:transition.state,action,events:transition.events});
       appendCausalEvents(
         this.causalTraceForAction(candidate, action, transition.events),
         actionStep,
@@ -4094,6 +3955,7 @@ export class WhiteCastleBGLabAdapter {
       autoAdvancedSteps,
       causalTrace: finalCausalTrace,
       outcome,
+      ...(complete ? {publicSummary:renderCheckSettlement(buildCheckSettlement(before,settlementTrace,candidate))} : {}),
       ...scoring,
     };
   }

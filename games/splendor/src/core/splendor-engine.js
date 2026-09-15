@@ -975,6 +975,11 @@
       const pid = draft.wrapper.currentPlayer;
       const player = draft.playerstorage[pid];
       const initialTotal = gemTotal(player);
+      // A noble visit ends any main action, not only a purchase. Keep this
+      // shared choice outside the token/reservation step grammars.
+      const trailingNoble = steps.at(-1)?.op === 'choose_noble'
+        ? {...steps.at(-1), index:steps.length - 1} : null;
+      const actionSteps = trailingNoble ? steps.slice(0, -1) : steps;
       let canonical;
 
       if (draft.wrapper.phase === 'choose_noble') {
@@ -982,15 +987,19 @@
         return this._applyPendingNobleChoice(draft, player, steps, events);
       } else if (draft.wrapper.phase === 'reserve_discard') {
         if (family !== 'reserve_card') this._reject(0, steps, 'EXPECTED_RESERVE_DISCARD', '必须完成保留后的弃牌', '以 begin(reserve_card) 和 discard_gem 完成当前决策');
-        canonical = this._applyReserveDiscard(draft, player, steps);
-      } else if (family === 'take_gems') canonical = this._applyTake(draft, player, steps, initialTotal);
+        canonical = this._applyReserveDiscard(draft, player, actionSteps);
+      } else if (family === 'take_gems') canonical = this._applyTake(draft, player, actionSteps, initialTotal);
       else if (family === 'buy_card') canonical = this._applyBuy(draft, player, steps);
-      else canonical = this._applyReserve(draft, player, steps, initialTotal);
+      else canonical = this._applyReserve(draft, player, actionSteps, initialTotal);
 
       if (gemTotal(player) > 10 && canonical.boundaryReason !== 'new_information') this._reject(steps.length, steps, 'HAND_LIMIT_EXCEEDED', '提交后手牌超过 10', '在链末尾加入恰好足量的 discard_gem');
-      const nobleChoice = canonical.nobleChoice;
+      const nobleChoice = canonical.nobleChoice || trailingNoble;
       delete canonical.nobleChoice;
       events.push({type:canonical.type, player:pid, action:clone(canonical)});
+      if (canonical.boundaryReason) {
+        if (nobleChoice) this._reject(nobleChoice.index, steps, 'NEW_INFORMATION_BOUNDARY', '保留后的弃牌尚未完成，不能提前结算贵族', '先提交保留；在后续弃牌链末尾选择符合条件的贵族');
+        return canonical;
+      }
       if (this._resolveNobleVisit(draft, steps, nobleChoice, events, canonical.type === 'buy_market')) canonical.boundaryReason = 'new_information';
       return canonical;
     }
@@ -1155,14 +1164,14 @@
         return true;
       }
       if (eligible.length > 1 && !choice) {
-        this._reject(steps.length, steps, 'NOBLE_SELECTION_REQUIRED', '同时满足多位贵族，必须选择其中一位', '在购买链末尾加入 choose_noble(nobleId)，并从 eligibleNobles 中选择', {eligibleNobles:eligibleFacts});
+        this._reject(steps.length, steps, 'NOBLE_SELECTION_REQUIRED', '同时满足多位贵族，必须选择其中一位', '在当前行动链末尾加入 choose_noble(nobleId)，并从 eligibleNobles 中选择', {eligibleNobles:eligibleFacts});
       }
       if (choice && eligible.length <= 1) {
-        this._reject(choice.index, steps, 'UNEXPECTED_NOBLE_SELECTION', '当前购买不需要选择贵族', '仅在同时满足多位贵族时加入 choose_noble', {eligibleNobles:eligibleFacts});
+        this._reject(choice.index, steps, 'UNEXPECTED_NOBLE_SELECTION', '当前行动不需要选择贵族', '仅在同时满足多位贵族时加入 choose_noble', {eligibleNobles:eligibleFacts});
       }
       const noble = choice ? eligible.find(item => item.id === choice.nobleId) : eligible[0];
       if (choice && !noble) {
-        this._reject(choice.index, steps, 'NOBLE_NOT_ELIGIBLE', '所选贵族当前不符合来访条件', '从 eligibleNobles 中选择一位，并重新提交完整购买链', {eligibleNobles:eligibleFacts, selectedNobleId:choice.nobleId});
+        this._reject(choice.index, steps, 'NOBLE_NOT_ELIGIBLE', '所选贵族当前不符合来访条件', '从 eligibleNobles 中选择一位，并重新提交完整行动链', {eligibleNobles:eligibleFacts, selectedNobleId:choice.nobleId});
       }
       if (!noble) return;
       draft.gamestorage.nobles = draft.gamestorage.nobles.filter(item => item.id !== noble.id);

@@ -661,6 +661,7 @@ def compile_semantic_chain(
                 trusted_engine_prefix,
             )
         projection_automatic_indexes = set(inserted_step_indexes)
+        automatic_suffix_start: int | None = None
         raw_auto_advanced = validation.get("autoAdvancedSteps")
         if (
             isinstance(raw_auto_advanced, list)
@@ -673,6 +674,8 @@ def compile_semantic_chain(
                 == _canonical(item)
                 for offset, item in enumerate(raw_auto_advanced)
             ):
+                if raw_auto_advanced:
+                    automatic_suffix_start = auto_start
                 projection_automatic_indexes.update(
                     step_index
                     for step_index in range(auto_start, len(validated))
@@ -819,6 +822,27 @@ def compile_semantic_chain(
             fact_owners=fact_owners,
             submitted=submitted,
         )
+        if matched < len(facts) and automatic_suffix_start is not None:
+            # Prefix validation may finish a turn once only optional choices
+            # remain. An explicit remaining player action (e.g. exchanging a
+            # newly gained seal) must be tried before that automatic suffix.
+            # Re-open only authority-added steps, never submitted choices;
+            # every proposal still undergoes the normal engine validation.
+            first_position = max(
+                automatic_suffix_start,
+                matched_step_indexes[-1] + 1 if matched_step_indexes else 0,
+            )
+            for position in range(first_position, len(validated)):
+                steps = (*validated[:position], copy.deepcopy(dict(facts[matched])))
+                if len(steps) > max_depth:
+                    continue
+                fingerprint = _canonical(steps)
+                if fingerprint in seen:
+                    continue
+                seen.add(fingerprint)
+                frontier.append((steps, frozenset(
+                    index for index in projection_automatic_indexes if index < position
+                )))
         for action in reversed(candidates):
             transaction_action = copy.deepcopy(dict(action))
             transaction_action.pop("choiceType", None)

@@ -11,7 +11,7 @@ from bglab.games.authority_worker import AuthorityWorker
 from bglab.games.registry import GameDefinition
 from bglab.games.replay import authority_hash
 from bglab.games.semantic_validation import load_semantic_descriptor, project_authority_program
-from bglab.games.tools.semantic_lifecycle import restore_semantic_lifecycle, semantic_identity_from_ctx, semantic_route_id
+from bglab.games.tools.semantic_lifecycle import restore_semantic_lifecycle, semantic_identity_from_ctx, semantic_route_number
 
 
 FALLBACK_FAILURE_REASONS = frozenset({"output_limit", "repeated_output", "timeout", "decision_exhausted", "invalid_tool_arguments", "context_capacity"})
@@ -42,7 +42,7 @@ def select_fallback_action(
             if candidate.commit_ready and candidate.intent_exact:
                 # Reuse its immutable binding; do not re-project and compile a
                 # checked route into a potentially different direct chain.
-                return {"operation": "commit", "id": semantic_route_id(identity, candidate)}, "current_checked_route"
+                return {"operation": "commit", "id": semantic_route_number(lifecycle, candidate)}, "current_checked_route"
     worker = AuthorityWorker(definition, copy.deepcopy(snapshot),
                              decision_id=identity.decision_id, request_timeout_s=30.0)
     try:

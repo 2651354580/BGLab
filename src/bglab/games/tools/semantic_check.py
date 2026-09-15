@@ -33,6 +33,9 @@ from bglab.games.semantic_validation.schema import (
 from bglab.games.semantic_validation.model_contract import ModelActionContract
 
 
+SINGLE_CHECK_RESULT_LIMIT = 3
+BATCH_CHECK_RESULT_LIMIT = 2
+
 
 def _freeze_json(value: Any) -> Any:
     if isinstance(value, Mapping):
@@ -238,8 +241,18 @@ class CheckOutcome:
 class CheckHandler:
     """Normalize and evaluate one semantic route on a read-only worker."""
 
-    def __init__(self, descriptor: SemanticDescriptor) -> None:
+    def __init__(
+        self,
+        descriptor: SemanticDescriptor,
+        *,
+        candidate_limit: int = 5,
+        result_limit: int = SINGLE_CHECK_RESULT_LIMIT,
+    ) -> None:
+        if isinstance(result_limit, bool) or not isinstance(result_limit, int) or not 1 <= result_limit <= 5:
+            raise ValueError("Check result limit must be an integer from 1 to 5")
         self._descriptor = descriptor
+        self._candidate_limit = candidate_limit
+        self._result_limit = result_limit
         self._cached_key: tuple[str, str, SemanticPayload] | None = None
         self._cached_outcome: CheckOutcome | None = None
 
@@ -348,6 +361,7 @@ class CheckHandler:
                 payload.chains[0],
                 decision_id=request.decision_id,
                 state_hash=request.state_hash,
+                candidate_limit=self._candidate_limit,
             )
         except (RuntimeError, TypeError, ValueError) as exc:
             return CheckOutcome(
@@ -360,6 +374,17 @@ class CheckHandler:
             close = getattr(worker, "close", None)
             if callable(close):
                 close()
+
+        # Output width must not change the authority search's prefix scope or
+        # ranking. Slice once before both rendering and Commit bindings exist.
+        if len(envelope.search.candidates) > self._result_limit:
+            envelope = replace(
+                envelope,
+                search=replace(
+                    envelope.search,
+                    candidates=envelope.search.candidates[:self._result_limit],
+                ),
+            )
 
         # A validated exact route takes precedence over an incomplete compiler
         # attempt. Otherwise expose why the submitted prefix needed changing.

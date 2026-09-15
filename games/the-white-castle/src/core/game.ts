@@ -737,7 +737,7 @@ function visibleDomainRewards(player: PlayerState, row: import("./types").MajorA
 function domainCardRowEffects(player: PlayerState, row: import("./types").MajorAction): Effect[] {
   if (player.domainCard.kind === "starting") {
     const card = STARTING_ACTION_CARDS.find((candidate) => candidate.id === player.domainCard.id);
-    return card?.effect.type === "majorAction" && card.effect.action === row ? materialEffects([card.effect]) : [];
+    return card?.effect.type === "majorAction" && card.domainRows.includes(row) ? materialEffects([card.effect]) : [];
   }
   const card = (player.domainCard.kind === "steward" ? STEWARD_CARDS : DIPLOMAT_CARDS).find((candidate) => candidate.id === player.domainCard.id);
   if (!card) return [];

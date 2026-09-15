@@ -26,13 +26,14 @@ from bglab.games.tools.semantic_lifecycle import (
     semantic_delivery_fingerprint,
     semantic_identity_is_stale,
     semantic_route_id,
+    semantic_route_number,
     validate_candidate_canonical_steps_fingerprint,
 )
 from bglab.games.semantic_validation.closest import commit_equivalent
 from bglab.games.semantic_validation.model import SemanticAction, SemanticChain
 
 
-_CANDIDATE_LABEL_RE = re.compile(r"C[1-5]\Z")
+_CANDIDATE_LABEL_RE = re.compile(r"C[1-9]\Z")
 _ATTEMPT_CLOSED_CODES = frozenset(
     {
         "STALE_ATTEMPT_REJECTED",
@@ -96,7 +97,7 @@ def _semantic_chain_from_mapping(value: Any) -> SemanticChain | None:
 
 @dataclass(frozen=True, slots=True)
 class CommitRequest:
-    route_id: str | None = None
+    route_id: int | str | None = None
     chains: tuple[Mapping[str, Any], ...] = ()
 
     @classmethod
@@ -113,11 +114,10 @@ class CommitRequest:
             raise ValueError("commit request requires exactly one of id or chains")
         if has_id:
             route_id = arguments["id"]
-            if (
-                not isinstance(route_id, str)
-                or re.fullmatch(r"r[0-9a-f]{24}", route_id) is None
-            ):
-                raise ValueError("commit id must be the complete route ID returned by Check")
+            numeric = isinstance(route_id, int) and not isinstance(route_id, bool) and route_id >= 1
+            legacy = isinstance(route_id, str) and re.fullmatch(r"r[0-9a-f]{24}", route_id) is not None
+            if not numeric and not legacy:
+                raise ValueError("commit id must be a positive integer returned by Check")
             return cls(route_id=route_id)
         chains = arguments["chains"]
         if not isinstance(chains, (list, tuple)):
@@ -146,7 +146,7 @@ class CommitProvenance:
         if self.source not in {"id", "chains"}:
             raise ValueError("commit provenance source must be id or chains")
         if _CANDIDATE_LABEL_RE.fullmatch(self.candidate_label) is None:
-            raise ValueError("commit provenance candidate label must be C1-C5")
+            raise ValueError("commit provenance candidate label must be C1-C9")
         if not isinstance(self.program_id, str) or not self.program_id:
             raise ValueError("commit provenance program_id must be non-empty")
         if (
@@ -267,13 +267,20 @@ class CommitHandler:
         identity: SemanticDecisionIdentity,
         lifecycle: SemanticLifecycle | None,
     ) -> BoundTransaction:
+        route_id = request.route_id
+        if not (
+            isinstance(route_id, int) and not isinstance(route_id, bool) and route_id >= 1
+            or isinstance(route_id, str) and re.fullmatch(r"r[0-9a-f]{24}", route_id)
+        ):
+            raise CommitResolutionError("UNKNOWN_ROUTE_ID", "invalid Check route number")
         if lifecycle is None or semantic_identity_is_stale(lifecycle.identity, identity):
             raise CommitResolutionError(
                 "CHECK_REQUIRED",
                 "commit id is valid only for a Check in the current decision",
             )
         matches = [candidate for candidate in all_checked_candidates(lifecycle)
-                   if semantic_route_id(identity, candidate) == request.route_id]
+                   if (semantic_route_id(identity, candidate) if isinstance(request.route_id, str)
+                       else semantic_route_number(lifecycle, candidate)) == request.route_id]
         if len(matches) != 1:
             raise CommitResolutionError(
                 "UNKNOWN_ROUTE_ID",
@@ -358,11 +365,17 @@ class CommitHandler:
                 "SEMANTIC_VALIDATION_FAILED",
                 str(exc),
             ) from exc
-        if (
-            not isinstance(outcome, CheckOutcome)
-            or not outcome.ok
-            or outcome.compilation_status != "complete"
-        ):
+        if not isinstance(outcome, CheckOutcome):
+            raise CommitResolutionError(
+                "SEMANTIC_VALIDATION_FAILED",
+                "direct chain validation returned an invalid outcome",
+            )
+        if not outcome.ok:
+            raise CommitResolutionError(
+                outcome.error_code or "SEMANTIC_VALIDATION_FAILED",
+                outcome.error_message or "direct chain validation failed",
+            )
+        if outcome.compilation_status != "complete":
             raise CommitResolutionError(
                 "CHECK_REQUIRED",
                 "direct Commit accepts only an already complete legal chain; use Check first",
@@ -711,6 +724,7 @@ class CommitCoordinator:
                 candidates=prepared.candidates,
                 deferred_candidates=prepared.deferred_candidates,
                 checked_candidates=prepared.checked_candidates,
+                route_numbers=prepared.route_numbers,
             )
             self._persist_best_effort(ports, cleared)
             return self._error(
@@ -852,6 +866,7 @@ class CommitCoordinator:
                 semantic_delivery_fingerprint(transaction.identity, candidate): replace(candidate, label="C1")
                 for candidate in all_checked_candidates(current)
             } if current is not None else {},
+            route_numbers=current.route_numbers if current is not None else {},
         )
 
     @staticmethod
@@ -865,6 +880,7 @@ class CommitCoordinator:
             candidates=lifecycle.candidates,
             deferred_candidates=lifecycle.deferred_candidates,
             checked_candidates=lifecycle.checked_candidates,
+            route_numbers=lifecycle.route_numbers,
             commit_fence=CommitFence(
                 candidate_label=transaction.bound_candidate.label,
                 delivery_fingerprint=transaction.delivery_fingerprint,

@@ -70,16 +70,16 @@ def render_public_bgact_error(
     if code == "UNKNOWN_ROUTE_ID":
         return PublicBgActError(
             code=code,
-            message="这个 ID 不属于当前可提交路线，尚未执行任何行动。",
-            next_action="采用当前 DecisionFrame 中已核验的路线时，原样复制它的完整 ID；局面已改变或路线已修改时，请提交完整 chains，仍需核验时重新 Check。",
+            message="这个编号不属于当前可提交路线，尚未执行任何行动。",
+            next_action="采用当前局面已核验的路线时，填写 Check 返回的数字编号；局面已改变或路线已修改时，重新 Check 后再选择，不要猜编号。",
         )
     if code in {"DIRECT_CHAIN_REQUIRES_CHECK", "CHECK_REQUIRED"}:
         return PublicBgActError(
             code="CHECK_REQUIRED",
-            message="这条路线不能按无需修正的完整链直接 Commit。",
+            message="当前提交缺少有效的已核验路线，尚未执行任何行动。",
             next_action=(
-                "这条路线需要纠正、补全或消除歧义；可用 operation=check 获取完整合法路线，"
-                "也可自行改成另一条完整路线后再次 Commit。不要复用上一 Frame 的短 ID。"
+                "用 operation=check 核验当前意图；根据返回结果重新分析，符合意图和预期效果后提交对应数字编号。"
+                "若都不满意，调整关键选择并 Check 其他路线。不要复用上一局面的编号。"
             ),
         )
     if code == "INVALID_SEMANTIC_OPERATION":
@@ -88,7 +88,7 @@ def render_public_bgact_error(
             message="参数不符合当前行动格式。",
             next_action=(
                 "按当前 Tool schema 修正 operation 及其对应字段后再调用；"
-                "Check 使用待校验 chains，Commit 使用本轮短 ID 或一条已经决定执行的"
+                "Check 使用待校验 chains，Commit 使用本轮数字编号或一条已经决定执行的"
                 "完整 chains。只修正包装，不改变原动作与顺序。"
             ),
         )

@@ -45,10 +45,10 @@ from bglab.games.tools.semantic_lifecycle import (
     BoundCandidate,
     SemanticLifecycle,
     retain_checked_candidates,
-    restore_semantic_lifecycle,
+    restore_turn_semantic_lifecycle,
     semantic_chain_fingerprint,
     semantic_identity_from_ctx,
-    semantic_route_id,
+    semantic_route_number,
     serialize_semantic_lifecycle,
 )
 from bglab.games.tools.public_error import render_public_bgact_error
@@ -114,9 +114,9 @@ _SINGLE_DISPLAY_LABEL_RE = re.compile(r"(?<![A-Za-z0-9.])C([1-5])(?![A-Za-z0-9.]
 
 def project_current_turn_route_ids(
     rendered_result: str,
-    source_route_ids: Mapping[str, str],
+    source_route_ids: Mapping[str, int],
 ) -> str:
-    """Replace internal ranks with concrete transaction references."""
+    """Replace internal display ranks with persisted turn-local numbers."""
 
     text = str(rendered_result)
     placeholders: dict[str, str] = {}
@@ -139,18 +139,19 @@ def project_current_turn_route_ids(
     for placeholder, route_id in placeholders.items():
         text = text.replace(placeholder, route_id)
 
-    text = text.replace("可提交显示路线：", "可提交短 ID：")
+    text = text.replace("可提交显示路线：", "可提交路线编号：")
+    text = text.replace("可提交短 ID：", "可提交路线编号：")
     text = text.replace(
         "显示标签不进入 Tool 输入",
-        "只有明确列出的可提交短 ID 才能作为 commit.id；组号和参考号不能提交",
+        "只有明确列出的可提交路线编号才能作为 commit.id；组号和参考号不能提交",
     )
     text = text.replace(
         "显示编号永远不进入 Tool 输入",
-        "只有明确列出的可提交短 ID 才能作为 commit.id",
+        "只有明确列出的可提交路线编号才能作为 commit.id",
     )
     text = re.sub(
-        r"可提交短 ID：([r0-9a-f、]+)",
-        lambda match: "可提交短 ID：" + "、".join(dict.fromkeys(
+        r"可提交路线编号：([0-9、]+)",
+        lambda match: "可提交路线编号：" + "、".join(dict.fromkeys(
             match.group(1).split("、"),
         )),
         text,
@@ -209,7 +210,7 @@ def _operation_schema_branches(
     )
     chains = copy.deepcopy(chain_branch["properties"]["chains"])
     chains["description"] = (
-        "Check 接受一至三条有实质差异的路线；直接 Commit 只接受一条完整路线。"
+        "Check 输入有实质差异的备选路线；直接 Commit 输入一条完整路线。输入条数遵循各操作的 Schema 约束。"
         "完全相同的 Check 路线会被确定性合并。"
     )
     check_chains = copy.deepcopy(chains)
@@ -228,13 +229,13 @@ def _operation_schema_branches(
             "description": contract.commit_operation_summary(),
             "properties": {
                 "id": {
-                    "type": "string",
-                    "pattern": "^r[0-9a-f]{24}$",
+                    "type": "integer",
+                    "minimum": 1,
                     "description": (
-                        "只提交当前 DecisionFrame 中 Check 明确返回的可提交短 ID。"
-                        "原样复制完整字符串，不是路线排序或游戏编号；当前 Frame 尚未"
-                        "Check 时不要填写 id，应在 chains 中直接提交完整行动链。Frame 改变"
-                        "后旧 ID 立即失效。"
+                        "填写 Check 返回的可提交路线编号，如 1。同一 turn 的多次 Check"
+                        "共用连续编号，旧编号不会改指其他路线；提交完成后的新 turn 从1重新编号。"
+                        "编号只绑定校验时的局面；局面改变后须重新 Check。"
+                        "尚未 Check 时可在 chains 中直接提交完整行动链，不要猜编号。"
                     ),
                 },
                 "chains": commit_chains,
@@ -256,7 +257,7 @@ def _schema_from_operations(
             "enum": list(operations),
             "description": (
                 "check 只读校验拟议路线，不改变状态；commit 提交当前 Check 的一个"
-                "短 ID，或直接提交一条完整行动链。"
+                "路线编号，或直接提交一条完整行动链。"
             ),
         },
     }
@@ -420,7 +421,7 @@ def create_semantic_operation_tool(
         current = identity()
         if current is None:
             return None
-        return restore_semantic_lifecycle(
+        return restore_turn_semantic_lifecycle(
             ctx.get("_semantic_lifecycle_v2"),
             current,
         )
@@ -429,12 +430,13 @@ def create_semantic_operation_tool(
         ctx["_semantic_lifecycle_v2"] = serialize_semantic_lifecycle(lifecycle)
         persist()
 
-    def persist_checked_candidates(current, candidates) -> None:
+    def persist_checked_candidates(current, candidates) -> SemanticLifecycle | None:
         lifecycle = retain_checked_candidates(load_lifecycle(), current, candidates)
         ctx["_semantic_lifecycle_v2"] = (
             serialize_semantic_lifecycle(lifecycle) if lifecycle is not None else None
         )
         persist()
+        return lifecycle
 
     def record_argument_normalizations(
         events: tuple[Mapping[str, Any], ...],
@@ -490,8 +492,23 @@ def create_semantic_operation_tool(
             )
             labels = "、".join(fact.label for fact in facts if fact.commit_ready)
             if labels:
-                rendered += f"\n\n可提交短 ID：{labels}。"
+                rendered += f"\n\n可提交路线编号：{labels}。"
             return rendered
+
+        def finish_check_result(content, route_ids, diagnostic="") -> str:
+            if diagnostic:
+                content += (
+                    "\n\n原始输入草稿的校验说明：以下问题针对输入草稿，"
+                    "不否定上方已核验的候选；输入草稿序号不是可提交编号。\n"
+                    + diagnostic
+                )
+            # All evidence and notices precede the single next-action handoff.
+            return project_current_turn_route_ids(
+                append_semantic_check_result_guidance(
+                    add_duplicate_route_notice(content), interaction_contract,
+                ),
+                route_ids,
+            )
 
         current = identity()
         if current is None:
@@ -504,7 +521,10 @@ def create_semantic_operation_tool(
                 "ACTION_ALREADY_COMMITTED",
                 "当前决策已经提交，不能再次校验。",
             )
-        active = load_lifecycle()
+        try:
+            active = load_lifecycle()
+        except ValueError as exc:
+            return invalid("INVALID_SEMANTIC_BINDING", str(exc))
         if active is not None and active.commit_fence is not None:
             return invalid(
                 "COMMIT_FENCE_ACTIVE",
@@ -581,57 +601,54 @@ def create_semantic_operation_tool(
                 if route.outcome.authority_diagnostic:
                     diagnostics.setdefault(route.outcome.authority_diagnostic, []).append(route.route_index)
             diagnostic = "\n\n".join(
-                "输入路线 " + "、".join(map(str, indexes)) + "：\n" + detail
+                "输入草稿 " + "、".join(map(str, indexes)) + "：\n" + detail
                 for detail, indexes in diagnostics.items()
             )
             ctx["_semantic_last_check_diagnostic"] = diagnostic
             ctx["_semantic_lifecycle_pending_confirmation"] = False
             candidates: dict[str, BoundCandidate] = {}
             checked_route_aliases: dict[str, str] = {}
-            source_route_ids: dict[str, str] = {}
-            route_id_by_fingerprint: dict[str, str] = {}
+            source_route_labels: dict[str, str] = {}
+            route_label_by_fingerprint: dict[str, str] = {}
             for route in batch_outcome.route_outcomes:
-                primary = next(iter(route.outcome.candidates), None)
-                if primary is None:
-                    continue
-                if primary.commit_ready is not True:
-                    return invalid(
-                        "INVALID_SEMANTIC_BINDING",
-                        "完整校验路线缺少可提交绑定。",
+                for primary in route.outcome.candidates:
+                    if primary.commit_ready is not True:
+                        return invalid(
+                            "INVALID_SEMANTIC_BINDING",
+                            "完整校验路线缺少可提交绑定。",
+                        )
+                    source_label = f"R{route.route_index}.{primary.label}"
+                    fingerprint = semantic_chain_fingerprint(primary.semantic_chain)
+                    existing_route_id = route_label_by_fingerprint.get(fingerprint)
+                    if existing_route_id is not None:
+                        source_route_labels[source_label] = existing_route_id
+                        continue
+                    label = f"C{len(candidates) + 1}"
+                    checked_route_aliases[label] = source_label
+                    bound = BoundCandidate.from_dict(
+                        {
+                            "label": label,
+                            "programId": primary.program_id,
+                            "engineSteps": primary.engine_steps,
+                            "canonicalStepsFingerprint": primary.canonical_steps_fingerprint,
+                            "bindingFingerprint": primary.binding_fingerprint,
+                            "intentExact": primary.intent_exact,
+                            "commitReady": primary.commit_ready,
+                            "semanticChain": primary.semantic_chain,
+                        },
                     )
-                source_label = f"R{route.route_index}.{primary.label}"
-                fingerprint = semantic_chain_fingerprint(primary.semantic_chain)
-                existing_route_id = route_id_by_fingerprint.get(fingerprint)
-                if existing_route_id is not None:
-                    source_route_ids[source_label] = existing_route_id
-                    continue
-                label = f"C{len(candidates) + 1}"
-                checked_route_aliases[label] = source_label
-                bound = BoundCandidate.from_dict(
-                    {
-                        "label": label,
-                        "programId": primary.program_id,
-                        "engineSteps": primary.engine_steps,
-                        "canonicalStepsFingerprint": primary.canonical_steps_fingerprint,
-                        "bindingFingerprint": primary.binding_fingerprint,
-                        "intentExact": primary.intent_exact,
-                        "commitReady": primary.commit_ready,
-                        "semanticChain": primary.semantic_chain,
-                    },
-                )
-                if bound is not None:
-                    candidates[label] = bound
-                    route_id = semantic_route_id(current, bound)
-                    source_route_ids[source_label] = route_id
-                    route_id_by_fingerprint[fingerprint] = route_id
+                    if bound is not None:
+                        candidates[label] = bound
+                        source_route_labels[source_label] = label
+                        route_label_by_fingerprint[fingerprint] = label
             ctx["_semantic_latest_check_route_count"] = len(
                 batch_outcome.checked_routes,
             )
             ctx["_semantic_latest_ready_route_count"] = len(candidates)
             if candidates:
-                persist_checked_candidates(current, candidates)
+                lifecycle = persist_checked_candidates(current, candidates)
             elif batch_outcome.checked_routes:
-                persist_checked_candidates(current, {})
+                lifecycle = persist_checked_candidates(current, {})
             else:
                 remember_deterministic_failure([
                     route.outcome.error_code
@@ -642,10 +659,14 @@ def create_semantic_operation_tool(
                     batch_outcome.error_message or "批量校验失败。",
                     public_evidence=batch_outcome.rendered_result,
                 )
+            source_route_ids = {
+                source: semantic_route_number(lifecycle, candidates[label])
+                for source, label in source_route_labels.items()
+            }
             ctx["_semantic_last_check_fingerprint"] = check_fingerprint
             if descriptor.model_contract.tool_schema == "compact-flat":
                 compact_facts = []
-                seen_route_ids: set[str] = set()
+                seen_route_ids: set[int] = set()
                 sources_by_id = {}
                 for route in batch_outcome.route_outcomes:
                     for source in route.outcome.checked_routes:
@@ -674,22 +695,10 @@ def create_semantic_operation_tool(
                     )
                 if len(compact_facts) < len(batch_outcome.checked_routes):
                     raw_visible_result += "\n\n多条输入收敛为同一条路线，已合并。"
-                raw_visible_result = add_duplicate_route_notice(
-                    append_semantic_check_result_guidance(
-                        raw_visible_result,
-                        interaction_contract,
-                    )
-                )
             else:
-                raw_visible_result = add_duplicate_route_notice(
-                    append_semantic_check_result_guidance(
-                        batch_outcome.rendered_result,
-                        interaction_contract,
-                    )
-                )
-            visible_result = project_current_turn_route_ids(
-                raw_visible_result + ("\n\n" + diagnostic if diagnostic else ""),
-                source_route_ids,
+                raw_visible_result = batch_outcome.rendered_result
+            visible_result = finish_check_result(
+                raw_visible_result, source_route_ids, diagnostic,
             )
             return completed(
                 visible_result,
@@ -752,7 +761,7 @@ def create_semantic_operation_tool(
             candidates[bound.label] = bound
         ctx["_semantic_latest_check_route_count"] = len(outcome.checked_routes)
         ctx["_semantic_latest_ready_route_count"] = len(candidates)
-        persist_checked_candidates(current, candidates)
+        lifecycle = persist_checked_candidates(current, candidates)
         ctx["_semantic_lifecycle_pending_confirmation"] = False
         checked_route_aliases = {
             fact.label: fact.label
@@ -760,7 +769,7 @@ def create_semantic_operation_tool(
             if fact.commit_ready is True
         }
         source_route_ids = {
-            fact.label: semantic_route_id(current, candidates[fact.label])
+            fact.label: semantic_route_number(lifecycle, candidates[fact.label])
             for fact in outcome.checked_routes
             if fact.commit_ready is True
         }
@@ -770,14 +779,8 @@ def create_semantic_operation_tool(
             if descriptor.model_contract.tool_schema == "compact-flat"
             else outcome.rendered_result
         )
-        if outcome.authority_diagnostic:
-            raw_visible_result += "\n\n" + outcome.authority_diagnostic
-        visible_result = project_current_turn_route_ids(
-            add_duplicate_route_notice(append_semantic_check_result_guidance(
-                raw_visible_result,
-                interaction_contract,
-            )),
-            source_route_ids,
+        visible_result = finish_check_result(
+            raw_visible_result, source_route_ids, outcome.authority_diagnostic,
         )
         return completed(
             visible_result,
@@ -801,7 +804,7 @@ def create_semantic_operation_tool(
             label = "当前路线"
             if lifecycle is not None and lifecycle.commit_fence is not None:
                 candidate = lifecycle.candidates[lifecycle.commit_fence.candidate_label]
-                label = f"路线 {semantic_route_id(lifecycle.identity, candidate)}"
+                label = f"路线 {semantic_route_number(lifecycle, candidate)}"
             if outcome.idempotent:
                 return completed(
                     f"{label} 已在本轮提交；重复请求未再次执行。",
@@ -853,7 +856,10 @@ def create_semantic_operation_tool(
             request = CommitRequest.from_arguments(arguments)
         except (TypeError, ValueError) as exc:
             return invalid("INVALID_SEMANTIC_INPUT", str(exc))
-        lifecycle = load_lifecycle()
+        try:
+            lifecycle = load_lifecycle()
+        except ValueError as exc:
+            return invalid("INVALID_SEMANTIC_BINDING", str(exc))
         try:
             commit_handler = CommitHandler(
                 check_handler=check_handler,
