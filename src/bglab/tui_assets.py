@@ -42,13 +42,13 @@ BGLAB_WORDMARK_ANSI = (
 )
 
 
-# Distinct terminal lettering: engraved capitals, ceramic tiles, and ink strokes.
+# Shared block-stroke lettering; each game's palette is applied by the TUI.
 GAME_ARTWORK = {
     "splendor": (
-        " ___   ___   _      ___   _  _   ___    ___   ___\n"
-        "/ __| | _ \\ | |    | __| | \\| | |   \\  / _ \\ | _ \\\n"
-        "\\__ \\ |  _/ | |__  | _|  | .  | | |) | |(_)| |   /\n"
-        "|___/ |_|   |____| |___| |_|\\_| |___/  \\___/ |_|_\\"
+        "▄▀▀▀  █▀▀▄  █     █▀▀▀  █▄  █ █▀▀▄  ▄▀▀▀▄ █▀▀▄\n"
+        "▀▄▄   █▄▄▀  █     █▄▄   █ ▀▄█ █   █ █   █ █▄▄▀\n"
+        "   █  █     █     █     █   █ █   █ █   █ █  █\n"
+        "▄▄▄▀  █     █▄▄▄  █▄▄▄  █   █ █▄▄▀  ▀▄▄▄▀ █   █"
     ),
     "white-castle": (
         "       T H E   W H I T E\n"
@@ -59,10 +59,9 @@ GAME_ARTWORK = {
         " ▀▄▄▄ █   █ ▄▄▄▀   █   █▄▄▄ █▄▄▄"
     ),
     "azul": (
-        "  ■ ■ ■    ■ ■ ■ ■ ■  ■       ■  ■\n"
-        "■       ■        ■    ■       ■  ■\n"
-        "■ ■ ■ ■ ■      ■      ■       ■  ■\n"
-        "■       ■    ■        ■       ■  ■\n"
-        "■       ■  ■ ■ ■ ■ ■    ■ ■ ■    ■ ■ ■ ■ ■"
+        " ▄▀▄  ▀▀▀▀█ █   █ █\n"
+        "█   █   ▄▀  █   █ █\n"
+        "█▀▀▀█ ▄▀    █   █ █\n"
+        "█   █ █▄▄▄▄ ▀▄▄▄▀ █▄▄▄"
     ),
 }

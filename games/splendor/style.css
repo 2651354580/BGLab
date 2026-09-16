@@ -876,7 +876,8 @@ body { font-family:"Microsoft YaHei",system-ui,-apple-system,sans-serif; }
 
 /* Shared shell mount: only the board, cards, gems, nobles and private viewer
    area remain game-owned.  The shell owns the page chrome and timeline. */
-[data-game-id="splendor"] .bglab-board-viewport { min-width:0; overflow:auto; overflow-x:hidden; padding:8px; }
+.bglab-game-shell[data-game-id="splendor"] { --bglab-shell-bg:transparent; }
+[data-game-id="splendor"] .bglab-board-viewport { min-width:0; overflow:auto; overflow-x:hidden; padding:8px; background:transparent; }
 [data-game-id="splendor"] .splendor-board { min-width:0; width:100%; }
 [data-game-id="splendor"] .player-box {
   background:var(--bglab-card-bg);
