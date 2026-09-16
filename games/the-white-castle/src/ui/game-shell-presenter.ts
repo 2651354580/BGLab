@@ -586,7 +586,7 @@ function interactionFor(state: GameState, uiState: WhiteCastleUiState, legalActi
     && has("finishMajorAction")
     && !has("beginMajorAction")
     ? partialCourtierInstruction
-      ?? `当前资源不足，无法执行${memberLabel(pending.effect.action)}行动，请跳过`
+      ?? `当前无法执行${memberLabel(pending.effect.action)}行动，请跳过`
     : undefined;
   const instruction = uiState.pausedReason
     ?? (uiState.readOnly ? "历史回放，只读查看" : undefined)
