@@ -26,6 +26,8 @@ import { addResourcePick, isResourceChoiceComplete, type ResourceChoiceDraft } f
 import type { ActionStep, AdapterSnapshot } from "../adapter/bglab-adapter";
 import { ManualGameSession } from "./manual-session";
 import { humanDecisionEnded } from "./decision-session";
+import { BoardMotion, captureBoard } from "./board-motion";
+import { motionActions, motionSequence } from "./motion-sequence";
 import { Bridge } from "../adapter/ws-bridge";
 import { records as authoritativeHistory, type BglabActionRecord } from "../../../shared/ui/action-history.js";
 import type { GameShellSlots, GameShellView } from "../../../shared/ui/game-shell.js";
@@ -115,6 +117,60 @@ let manualTest = !adapter;
 let selectedPlayerCount: PlayerCount = state.playerCount;
 let aiRequestId: string | null = null;
 let pausedReason: string | null = null;
+const boardMotion = new BoardMotion();
+let presentationRevision = 0;
+let presentationTarget: GameState | null = null;
+let presentationIsAI = false;
+let presentationHistory: BglabActionRecord[] | null = null;
+
+function cancelPresentation() {
+  presentationRevision++;
+  boardMotion.cancel();
+  if (presentationTarget) state = presentationTarget;
+  presentationTarget = null;
+  presentationIsAI = false;
+  presentationHistory = null;
+}
+
+async function presentActions(before: GameState, actions: GameAction[], after: GameState, message: string | null, ai = false) {
+  const revision = presentationRevision, epoch = boardMotion.epoch;
+  if (!boardMotion.enabled()) { state = after; render(); return; }
+  presentationTarget = after;
+  presentationIsAI = ai;
+  try {
+    const frames = motionSequence(before, actions, after);
+    const shownEvents: GameEvent[] = [];
+    if (ai) presentationHistory = history.slice(1);
+    state = before;
+    announcement = ai ? `${before.players[before.currentPlayer].name}正在行动` : message;
+    render();
+    for (const frame of frames) {
+      if (revision !== presentationRevision || epoch !== boardMotion.epoch) break;
+      const origins = captureBoard(app, frame.events);
+      state = frame.after;
+      if (ai && history[0]) {
+        shownEvents.push(...frame.events);
+        // Keep the timeline at the same point as the board, without altering saved history.
+        presentationHistory = [{ ...history[0], events: [...shownEvents], action: null, outcome: null, text: "" }, ...history.slice(1)];
+      }
+      if (ai) announcement = frame.events.filter(event => ["DieDrafted", "DiePlaced", "MemberMoved", "CardMoved"].includes(event.type)).map(eventText).filter(Boolean).join("；") || "结算奖励";
+      render();
+      if (!await boardMotion.play(frame.events, origins, app, epoch, ai)) break;
+      if (ai && frames.at(-1) !== frame) await new Promise(resolve => setTimeout(resolve, 130));
+    }
+  } catch (error) {
+    // A visual failure must never retry or invalidate an accepted game action.
+    console.warn("Skipped board presentation", error);
+  } finally {
+    if (revision === presentationRevision) {
+      state = after;
+      presentationTarget = null;
+      presentationIsAI = false;
+      presentationHistory = null;
+      render();
+    }
+  }
+}
 
 function atlasStyle(atlasName: CardAtlas, card: number) {
   const atlas = CARD_ATLASES[atlasName];
@@ -191,9 +247,33 @@ function renderBridgeDice() {
       const row = color === "coral" ? 0 : color === "white" ? 1 : 2;
       const actionIndex = bridgeDieActionIndex(legalActions, color, index, dice.length);
       const label = actionIndex >= 0 ? actionLabel(legalActions[actionIndex]) : `${COLORS[color]}色 ${die.value} 点`;
-      return `<div class="board-piece board-piece--die ${actionIndex >= 0 ? "is-selectable" : ""}" data-die-id="${die.id}" ${directActionAttributes(actionIndex, label)} style="${placementStyle({ ...template, file: "/twc-dice.png", columns: 6, rows: 3, column: die.value - 1, row })}" aria-label="${label}"></div>`;
+      return `<div class="board-piece board-piece--die ${actionIndex >= 0 ? "is-selectable" : ""}" data-die-id="${die.id}" data-motion-key="die:${die.id}" ${directActionAttributes(actionIndex, label)} style="${placementStyle({ ...template, file: "/twc-dice.png", columns: 6, rows: 3, column: die.value - 1, row })}" aria-label="${label}"></div>`;
     });
   }).join("");
+}
+
+function boardCardMotionKey(card: BoardCard): string {
+  if (card.id.endsWith("-deck")) return `deck:${card.id}`;
+  const room = state.board.castleRooms.find(room => room.id === card.id);
+  return room ? `card:${room.floor}-${room.cardId}` : `board:${card.id}`;
+}
+
+function departedCardStyle(card: BoardCard): string {
+  if (!presentationIsAI) return "";
+  const key = boardCardMotionKey(card);
+  // While an arrival reward is pending the engine still references the old room
+  // card. During a complete AI presentation its physical copy is already moving.
+  const departed = key.startsWith("card:") && state.players.some(player =>
+    key === `card:${player.domainCard.kind}-${player.domainCard.id}` || player.lanternCards.includes(key.slice(5)));
+  return departed ? ";visibility:hidden" : "";
+}
+
+function renderDraftedDie() {
+  const drafted = state.draftedDie;
+  if (!drafted) return "";
+  const color = drafted.die.color === "coral" ? "red" : drafted.die.color;
+  const template = PUBLIC_COMPONENTS.find(item => item.id === `${color}-${drafted.fromEnd}`)!;
+  return `<div class="held-die" data-motion-key="die:${drafted.die.id}" style="${boardRectStyle({ x: template.x, y: template.y - 10, width: 35, height: 35 })};${dieSpriteStyle(drafted.die)}" title="已取出，等待放置"></div>`;
 }
 
 function renderPublicComponents() {
@@ -230,7 +310,7 @@ function renderPublicComponents() {
     const actionIndex = typeof candidateActionIndex === "number" ? candidateActionIndex : -1;
     const label = actionIndex >= 0 ? actionLabel(legalActions[actionIndex]) : item.label;
     return `<div class="board-piece board-piece--${item.kind} ${actionIndex >= 0 ? "is-selectable" : ""}" ${actionIndex >= 0 ? directActionAttributes(actionIndex, label) : ""} style="${placementStyle(item)}" aria-label="${escapeHtml(label)}"></div>`;
-  }).join("") + renderBridgeDice();
+  }).join("") + renderBridgeDice() + renderDraftedDie();
 }
 
 interface BoardRect { x: number; y: number; width: number; height: number }
@@ -409,7 +489,7 @@ function renderBoardInteractionLayer(cards: BoardCard[]) {
     return [`<button type="button" class="board-target" data-action-index="${index}" data-action-key="action-${index}" style="${boardRectStyle(BOARD_WORKSPACE_RECTS[action.workspace])}" aria-label="${label}"><span>${workspaceLabel(action.workspace)}</span></button>`];
   }) : [];
   const placed = Object.entries(BOARD_WORKSPACE_RECTS).flatMap(([workspaceId, rect]) => state.workspaces[workspaceId]?.dice.map((die, index, dice) => {
-    return `<div class="placed-die" style="${boardRectStyle(placedDieRect(workspaceId, rect, index, dice.length))};${dieSpriteStyle(die)}" title="${index + 1 === dice.length ? "顶层" : "下层"}：${COLORS[die.color]}色 ${die.value} 点"></div>`;
+    return `<div class="placed-die" data-motion-key="die:${die.id}" style="${boardRectStyle(placedDieRect(workspaceId, rect, index, dice.length))};${dieSpriteStyle(die)}" title="${index + 1 === dice.length ? "顶层" : "下层"}：${COLORS[die.color]}色 ${die.value} 点"></div>`;
   }) ?? []);
   const hotspots = [
     ...majorActionHotspots(cards),
@@ -448,7 +528,7 @@ function renderDeployedMembers(cards: BoardCard[]) {
     const cancelIndex = state.actionFlow?.selectedSource === member.id ? legalActions.findIndex((action) => action.type === "cancelMajorActionSelection") : -1;
     const actionIndex = cancelIndex >= 0 ? cancelIndex : sourceIndex;
     const actionAttributes = actionIndex >= 0 ? directActionAttributes(actionIndex, actionLabel(legalActions[actionIndex])) : "";
-    return `<div id="member-${member.id}" class="deployed-member ${actionIndex >= 0 ? "is-selectable" : ""} ${state.actionFlow?.selectedSource === member.id ? "is-selected" : ""}" ${actionAttributes} style="${placementStyle({ id: member.id, file, columns: 4, rows: 1, column: config.pieceColumn, row: 0, ...position, label: member.id, kind: "member" })}" title="${escapeHtml(player.name)}·${MEMBER_NAMES[member.type]}"></div>`;
+    return `<div id="member-${member.id}" data-motion-key="member:${member.id}" class="deployed-member ${actionIndex >= 0 ? "is-selectable" : ""} ${state.actionFlow?.selectedSource === member.id ? "is-selected" : ""}" ${actionAttributes} style="${placementStyle({ id: member.id, file, columns: 4, rows: 1, column: config.pieceColumn, row: 0, ...position, label: member.id, kind: "member" })}" title="${escapeHtml(player.name)}·${MEMBER_NAMES[member.type]}"></div>`;
   }).join("");
 }
 
@@ -460,8 +540,8 @@ function renderStartingCard(kind: "resource" | "action", id: number, className: 
 function renderDomainCard(player: PlayerState) {
   const card = player.domainCard;
   if (card.id === 0) return `<div class="domain-card domain-card--empty">等待选择初始卡</div>`;
-  if (card.kind === "starting") return `<div class="domain-card domain-card--starting">${renderStartingCard("action", card.id, "domain-card__starting")}</div>`;
-  return `<div class="domain-card" style="${atlasStyle(card.kind, card.id)}"></div>`;
+  if (card.kind === "starting") return `<div class="domain-card domain-card--starting" data-motion-key="card:starting-${card.id}">${renderStartingCard("action", card.id, "domain-card__starting")}</div>`;
+  return `<div class="domain-card" data-motion-key="card:${card.kind}-${card.id}" style="${atlasStyle(card.kind, card.id)}"></div>`;
 }
 
 function lanternBackStyle(card: string): string {
@@ -493,7 +573,7 @@ function renderLanternCards(player: PlayerState) {
   if (!player.lanternCards.length) return `<div class="lantern-empty" style="${lanternShelfStyle(0)}">等待初始资源卡</div>`;
   const actionIndex = player.id === state.currentPlayer ? lanternActionIndex() : -1;
   const actionAttributes = actionIndex >= 0 ? directActionAttributes(actionIndex, "获得灯笼区全部奖励") : "";
-  const cards = player.lanternCards.map((card, index) => `<div class="lantern-back-wrap" style="${lanternCardStyle(player.lanternCards.length, index)}" title="${card}（背面）"><div class="lantern-back" style="${lanternBackStyle(card)}"></div></div>`).join("");
+  const cards = player.lanternCards.map((card, index) => `<div class="lantern-back-wrap" data-motion-key="card:${card}" style="${lanternCardStyle(player.lanternCards.length, index)}" title="${card}（背面）"><div class="lantern-back" style="${lanternBackStyle(card)}"></div></div>`).join("");
   return `<div class="lantern-stack ${actionIndex >= 0 ? "is-selectable" : ""}" style="${lanternShelfStyle(player.lanternCards.length)};--card-ratio:${LANTERN_CARD_RATIO}" ${actionAttributes}>${cards}<b>${player.lanternCards.length}</b></div>`;
 }
 
@@ -504,7 +584,7 @@ function renderPlayerPieces(player: PlayerState, config: PlayerSetup) {
     const cancelIndex = state.actionFlow?.selectedSource === member.id ? legalActions.findIndex((action) => action.type === "cancelMajorActionSelection") : -1;
     const actionIndex = cancelIndex >= 0 ? cancelIndex : sourceIndex;
     const actionAttributes = actionIndex >= 0 ? directActionAttributes(actionIndex, actionLabel(legalActions[actionIndex])) : "";
-    return `<div id="member-${member.id}" class="player-piece player-piece--${member.type} ${actionIndex >= 0 ? "is-selectable" : ""} ${state.actionFlow?.selectedSource === member.id ? "is-selected" : ""}" ${actionAttributes} style="${playerPieceStyle(config, member.type, index)}" title="${MEMBER_NAMES[member.type]} ${index + 1}"></div>`;
+    return `<div id="member-${member.id}" data-motion-key="member:${member.id}" class="player-piece player-piece--${member.type} ${actionIndex >= 0 ? "is-selectable" : ""} ${state.actionFlow?.selectedSource === member.id ? "is-selected" : ""}" ${actionAttributes} style="${playerPieceStyle(config, member.type, index)}" title="${MEMBER_NAMES[member.type]} ${index + 1}"></div>`;
   }).join("");
 }
 
@@ -526,7 +606,7 @@ function renderPlayerWorkspaceInteraction(player: PlayerState) {
     const actionIndex = rewardActionIndex >= 0 ? rewardActionIndex : placeActionIndex;
     const target = actionIndex >= 0 ? `<button type="button" class="player-board-target" data-action-index="${actionIndex}" data-action-key="action-${actionIndex}" style="${playerRectStyle(rect)}" aria-label="${actionLabel(legalActions[actionIndex])}"><span>${MEMBER_NAMES[row]}</span></button>` : "";
     const dice = state.workspaces[workspaceId]?.dice ?? [];
-    const placed = dice.map((die) => `<div class="player-placed-die" style="${playerRectStyle(rect)};${dieSpriteStyle(die)}" title="${COLORS[die.color]}色 ${die.value} 点"></div>`).join("");
+    const placed = dice.map((die) => `<div class="player-placed-die" data-motion-key="die:${die.id}" style="${playerRectStyle(rect)};${dieSpriteStyle(die)}" title="${COLORS[die.color]}色 ${die.value} 点"></div>`).join("");
     return target + placed;
   }).join("");
 }
@@ -535,9 +615,9 @@ function renderPlayer(player: PlayerState, index: number) {
   const config = { ...PLAYER_STYLES[player.id], name: player.name } as PlayerSetup;
   const r = player.resources;
   const lantern = lanternLayout(player.lanternCards.length);
-  return `<article class="player-area ${state.currentPlayer === player.id ? "is-current" : ""}"><header class="player-heading"><div><span>顺位 ${state.turnOrder.indexOf(player.id) + 1}</span><h2>${escapeHtml(player.name)}</h2></div><div class="player-counters"><b>钱币 ${r.coins}</b><b>家纹 ${r.seals}</b><b>影响 ${player.influence}</b><b>分数 ${player.points}</b></div></header>
+  return `<article data-player-seat="${player.id}" class="player-area ${state.currentPlayer === player.id ? "is-current" : ""}"><header class="player-heading"><div><span>顺位 ${state.turnOrder.indexOf(player.id) + 1}</span><h2>${escapeHtml(player.name)}</h2></div><div class="player-counters"><b data-motion-key="counter:${player.id}:coins">钱币 ${r.coins}</b><b data-motion-key="counter:${player.id}:seals">家纹 ${r.seals}</b><b data-motion-key="counter:${player.id}:influence">影响 ${player.influence}</b><b data-motion-key="counter:${player.id}:points">分数 ${player.points}</b></div></header>
     <div class="player-table ${state.playerCount === 4 ? "player-table--four" : ""}" style="aspect-ratio:${PLAYER_BOARD.width}/${lantern.canvasHeight}"><div class="player-board" style="${playerBoardStyle(config)}">${renderPlayerPieces(player, config)}${renderPlayerWorkspaceInteraction(player)}${Array.from({ length: Math.min(5, Math.max(0, r.seals)) }, (_, index) => `<div class="seal-marker" data-seal-index="${index}" style="${sealMarkerStyle(index)}" title="家纹 ${index + 1}"></div>`).join("")}
-      <div class="resource-marker resource-marker--food" style="${resourceMarkerStyle("food", r.food)}"></div><div class="resource-marker resource-marker--iron" style="${resourceMarkerStyle("iron", r.iron)}"></div><div class="resource-marker resource-marker--pearl" style="${resourceMarkerStyle("pearl", r.pearl)}"></div>
+      <div class="resource-marker resource-marker--food" data-motion-key="counter:${player.id}:food" style="${resourceMarkerStyle("food", r.food)}"></div><div class="resource-marker resource-marker--iron" data-motion-key="counter:${player.id}:iron" style="${resourceMarkerStyle("iron", r.iron)}"></div><div class="resource-marker resource-marker--pearl" data-motion-key="counter:${player.id}:pearl" style="${resourceMarkerStyle("pearl", r.pearl)}"></div>
       <div class="player-action-slot">${renderDomainCard(player)}</div>
     </div>${renderLanternCards(player)}</div></article>`;
 }
@@ -565,7 +645,7 @@ function formatAuthoritativeHistory(record: BglabActionRecord): string {
   }
   if (gains.size) parts.push(`获得${[...gains].map(([name, amount]) => `${name} ${amount}`).join("、")}`);
   const major = action.steps?.find((step) => step.op === "beginMajorAction");
-  if (major?.mode) parts.push(`开始${MEMBER_NAMES[String(major.mode) as keyof typeof MEMBER_NAMES] ?? String(major.mode)}行动`);
+  if (major?.mode) parts.push(`开始${major.mode === "recruit" || major.mode === "promote" ? "家臣" : MEMBER_NAMES[String(major.mode) as keyof typeof MEMBER_NAMES] ?? String(major.mode)}行动`);
   if (!parts.length) {
     const moved = events.find((event) => event.type === "MemberMoved");
     if (moved) parts.push(`执行${String(moved.to ?? "版图")}行动`);
@@ -818,9 +898,10 @@ function phaseName() {
 }
 
 function render() {
+  app.dataset.playback = presentationIsAI ? "ai" : "none";
   const cards = dynamicBoardCards();
   legalActions = getLegalActions(state);
-  const actionsMarkup = renderActions();
+  const actionsMarkup = presentationIsAI ? "" : renderActions();
   const auxiliaryActions = renderSealActions();
   const turnControls = renderTurnControls();
   const standaloneControls = adapter ? "" : `<div class="manual-game-controls"><span>全席位手动 · ${state.playerCount} 人局</span><label>新局人数 <select id="player-count" aria-label="新局人数" ${busy ? "disabled" : ""}>${([2, 3, 4] as const).map((count) => `<option value="${count}" ${count === selectedPlayerCount ? "selected" : ""}>${count} 人</option>`).join("")}</select></label><button id="new-game" type="button" ${busy ? "disabled" : ""}>开始新局</button></div>`;
@@ -836,14 +917,14 @@ function render() {
     resourceChoiceDraft,
     setupDraftAction,
     hasUndo: undoStack.length > 0,
-  }, history);
+  }, presentationHistory ?? history);
   const turnSurfaceSlot = state.phase === "setup"
     ? `<section class="setup-choice-surface" aria-label="起始卡牌选择">${actionsMarkup}</section>`
     : "";
   const currentActionContent = state.phase === "setup"
     ? ""
     : `<div class="white-castle-current-actions" aria-label="白城堡当前合法操作">${actionsMarkup}</div>`;
-  const boardSlot = `<div class="board-column"><section class="board-frame"><section class="board-canvas"><img class="board-base" src="/twc-main-board.png" alt="姬路城公共版图"/><div class="card-layer">${cards.map((card) => `<div class="board-card board-card--${card.atlas}" style="${boardCardStyle(card)}" title="${card.label} · 卡 ${card.card}"></div>`).join("")}</div><div class="component-layer">${renderPublicComponents()}${renderDieTiles()}<div class="deployed-members">${renderDeployedMembers(cards)}</div></div>${renderBoardInteractionLayer(cards)}</section></section>
+  const boardSlot = `<div class="board-column"><section class="board-frame"><section class="board-canvas"><img class="board-base" src="/twc-main-board.png" alt="姬路城公共版图"/><div class="card-layer">${cards.map((card) => `<div class="board-card board-card--${card.atlas}" data-motion-key="${boardCardMotionKey(card)}" style="${boardCardStyle(card)}${departedCardStyle(card)}" title="${card.label} · 卡 ${card.card}"></div>`).join("")}</div><div class="component-layer">${renderPublicComponents()}${renderDieTiles()}<div class="deployed-members">${renderDeployedMembers(cards)}</div></div>${renderBoardInteractionLayer(cards)}</section></section>
     <section class="setup-summary"><span>桥上剩余骰：${Object.values(state.bridges).reduce((sum, dice) => sum + dice.length, 0)}</span><span>当前待处理：${state.pendingEffects.length}</span><span>庭园：${state.gardens.length}</span><span>训练场：${state.trainingYards.length}</span></section><section class="player-areas">${state.players.map(renderPlayer).join("")}</section></div>`;
   const sharedShell = window.BGLabGameShell;
   if (!sharedShell) throw new Error("Shared GameShell renderer is missing.");
@@ -853,7 +934,6 @@ function render() {
     actionPrimaryHtml: currentActionContent,
     actionAuxiliaryHtml: auxiliaryActions,
     actionRollbackHtml: `${turnControls}${standaloneControls}`,
-    overlayHtml: '<div id="animation-layer" aria-hidden="true"></div>',
   });
   sharedShell.bindActions(app, {
     cancel:() => {
@@ -899,18 +979,18 @@ function eventText(event: GameEvent) {
   }
   if (event.type === "ResourceChanged" && event.amount !== 0) return `${state.players[event.player].name}${event.amount > 0 ? "获得" : "支付"}${Math.abs(event.amount)} ${RESOURCE_NAMES[event.resource]}`;
   if (event.type === "InfluenceChanged" && event.amount !== 0) return `${state.players[event.player].name}的影响力${event.amount > 0 ? "前进" : "后退"}${Math.abs(event.amount)}格`;
-  if (event.type === "CardMoved") return `卡牌 ${event.card}：${event.from} → ${event.to}`;
+  if (event.type === "CardMoved") {
+    if (event.to === "lantern") return "将原个人工位卡翻入灯笼区";
+    if (event.to === "domain") return "将城堡卡移入个人工位";
+    if (event.from.endsWith("-deck")) return "从牌堆补入并翻开新卡";
+  }
   if (event.type === "RoundStarted") return `第 ${event.round} 轮开始`;
   if (event.type === "GameScored") return `游戏结束，${state.players[event.winner].name}获胜`;
   return "";
 }
 
-function memberOrigins() {
-  return new Map(state.players.flatMap((player) => player.members.map((member) => [member.id, document.getElementById(`member-${member.id}`)?.getBoundingClientRect()])).filter((entry): entry is [string, DOMRect] => Boolean(entry[1])));
-}
-
 function saveState() {
-  if (manualSession) localStorage.setItem(STORAGE_KEY, serializeGame(state));
+  if (manualSession) localStorage.setItem(STORAGE_KEY, serializeGame(presentationTarget ?? state));
   if (window.BG_GAME_ID) Bridge.persist();
 }
 
@@ -1027,6 +1107,7 @@ function commitDraft(): void {
 async function requestCurrentAI() {
   if (busy || !adapter || pausedReason || state.phase === "finished" || playerTypes[state.currentPlayer] !== "ai") return;
   const turnId = adapter.decisionId();
+  const presentationBefore = structuredClone(state);
   if (aiRequestId === turnId) return;
   aiRequestId = turnId;
   busy = true;
@@ -1040,15 +1121,17 @@ async function requestCurrentAI() {
       canonicalAction?: { steps?: ActionStep[] };
       effects?: GameEvent[];
     };
+    if (aiRequestId !== turnId || pausedReason) return;
     state = adapter.snapshot().game;
     history = hydrateAuthoritativeHistory(adapter.snapshot());
     const aiMessage = !response.retry ? history[0]?.text ?? "" : "";
     beginTurnTransaction();
     saveState();
-    if (aiMessage) await playAnnouncements([aiMessage]);
+    if (!response.retry) await presentActions(presentationBefore, motionActions(response.transaction?.steps ?? response.canonicalAction?.steps ?? response.action?.steps), state, aiMessage, true);
   } catch (error) {
-    pausedReason = error instanceof Error ? error.message : "AI API error; game paused";
+    if (aiRequestId === turnId) pausedReason = error instanceof Error ? error.message : "AI API error; game paused";
   } finally {
+    if (aiRequestId !== turnId) return;
     aiRequestId = null;
     busy = false;
     announcement = pausedReason;
@@ -1057,22 +1140,13 @@ async function requestCurrentAI() {
   }
 }
 
-async function playAnnouncements(messages: string[]) {
-  for (const message of messages) {
-    announcement = message;
-    render();
-    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches && !document.hidden) {
-      await new Promise((resolve) => window.setTimeout(resolve, 700));
-    }
-  }
-  announcement = null;
-  render();
-}
 
 async function submitAction(action: GameAction) {
   if (busy || !canHumanAct()) return;
   busy = true;
-  const origins = memberOrigins();
+  const presentationBefore = structuredClone(state);
+  const actionOffset = draftActions.length;
+  const revision = presentationRevision;
   const previousPhase = state.phase;
   const before = previousPhase !== "finished" ? checkpoint() : null;
   const sourceState = structuredClone(decisionStartState);
@@ -1088,15 +1162,15 @@ async function submitAction(action: GameAction) {
     const messages = [formatAction(actionChain, events, actor, sourceState)];
     if (!decisionEnded(state)) announcement = messages[0] ?? null;
     if (!applyIrreversibleBoundary(events) && before) undoStack.push(before);
+    const presentationActions = draftActions.slice(actionOffset);
     if (decisionEnded(state)) commitDraft();
     if (manualSession) saveState();
-    render();
-    await animateMoves(events, origins);
-    await playAnnouncements(messages);
+    await presentActions(presentationBefore, presentationActions, state, messages[0] ?? null);
   } catch (error) {
     console.error(error);
     alert(error instanceof Error ? error.message : "操作失败");
   } finally {
+    if (revision !== presentationRevision) return;
     busy = false;
     announcement = null;
     render();
@@ -1107,6 +1181,9 @@ async function submitAction(action: GameAction) {
 async function submitResourceChoice(picks: CappedResource[]) {
   if (busy || !canHumanAct() || picks.length === 0) return;
   busy = true;
+  const presentationBefore = structuredClone(state);
+  const actionOffset = draftActions.length;
+  const revision = presentationRevision;
   const events: GameEvent[] = [];
   const before = !undoLockedReason && state.phase !== "setup" ? checkpoint() : null;
   const sourceState = structuredClone(decisionStartState);
@@ -1128,14 +1205,15 @@ async function submitResourceChoice(picks: CappedResource[]) {
     const messages = [formatAction([...draftActions], events, actor, sourceState)];
     if (!decisionEnded(state)) announcement = messages[0] ?? null;
     if (!applyIrreversibleBoundary(events) && before) undoStack.push(before);
+    const presentationActions = draftActions.slice(actionOffset);
     if (decisionEnded(state)) commitDraft();
     if (manualSession) saveState();
-    render();
-    await playAnnouncements(messages);
+    await presentActions(presentationBefore, presentationActions, state, messages[0] ?? null);
   } catch (error) {
     console.error(error);
     alert(error instanceof Error ? error.message : "资源选择失败");
   } finally {
+    if (revision !== presentationRevision) return;
     busy = false;
     announcement = null;
     render();
@@ -1146,6 +1224,9 @@ async function submitResourceChoice(picks: CappedResource[]) {
 async function settleAll() {
   if (busy || !canHumanAct()) return;
   busy = true;
+  const presentationBefore = structuredClone(state);
+  const actionOffset = draftActions.length;
+  const revision = presentationRevision;
   const events: GameEvent[] = [];
   const before = !undoLockedReason && state.phase !== "setup" ? checkpoint() : null;
   const sourceState = structuredClone(decisionStartState);
@@ -1163,14 +1244,15 @@ async function settleAll() {
     const messages = events.length ? [formatAction([...draftActions], events, actor, sourceState)] : [];
     if (!decisionEnded(state)) announcement = messages[0] ?? null;
     if (events.length > 0 && !applyIrreversibleBoundary(events) && before) undoStack.push(before);
+    const presentationActions = draftActions.slice(actionOffset);
     if (decisionEnded(state)) commitDraft();
     if (manualSession) saveState();
-    render();
-    await playAnnouncements(messages);
+    await presentActions(presentationBefore, presentationActions, state, messages[0] ?? null);
   } catch (error) {
     console.error(error);
     alert(error instanceof Error ? error.message : "结算失败");
   } finally {
+    if (revision !== presentationRevision) return;
     busy = false;
     announcement = null;
     render();
@@ -1178,29 +1260,6 @@ async function settleAll() {
   }
 }
 
-async function animateMoves(events: GameEvent[], origins: Map<string, DOMRect>) {
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.hidden) return;
-  for (const event of events) {
-    if (event.type !== "MemberMoved") continue;
-    const target = document.getElementById(`member-${event.member}`);
-    const from = origins.get(event.member);
-    if (!target || !from) continue;
-    const to = target.getBoundingClientRect();
-    const clone = target.cloneNode(true) as HTMLElement;
-    Object.assign(clone.style, { position: "fixed", left: `${from.left}px`, top: `${from.top}px`, width: `${from.width}px`, height: `${from.height}px`, zIndex: "2000", margin: "0" });
-    document.body.append(clone); target.style.visibility = "hidden";
-    try {
-      await clone.animate([{ transform: "translate(0,0)" }, { transform: `translate(${to.left - from.left}px,${to.top - from.top}px)` }], { duration: 650, easing: "cubic-bezier(.2,.75,.2,1)" }).finished;
-    } catch (error) {
-      // Cancelling presentation must not report an already-applied action as a
-      // game failure. Other animation failures remain visible in diagnostics.
-      if (!(error instanceof DOMException && error.name === "AbortError")) console.warn("Member animation failed", error);
-    } finally {
-      clone.remove();
-      target.style.visibility = "";
-    }
-  }
-}
 
 function bind() {
   document.querySelectorAll<HTMLButtonElement>("[data-setup-choice-index]").forEach((control) => control.addEventListener("click", () => {
@@ -1275,6 +1334,7 @@ function resolvePlayerTypes(config: FrontendConfig, count: number): string[] {
 }
 
 function resetUiState() {
+  cancelPresentation();
   busy = false;
   announcement = null;
   resourceChoiceDraft = null;
@@ -1347,6 +1407,8 @@ window.BGLabFrontend = {
     window.setTimeout(() => void requestCurrentAI(), 0);
   },
   pause(message: string) {
+    cancelPresentation();
+    aiRequestId = null;
     pausedReason = message;
     busy = true;
     announcement = message;

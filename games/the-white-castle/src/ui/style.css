@@ -95,8 +95,12 @@ button { font:inherit; } .page-shell { width:calc(100% - 32px); max-width:1400px
 .region-slot .player-piece { position:absolute!important; inset:0!important; width:100%!important; height:100%!important; z-index:14; }
 .component-in-slot { margin:0!important; }
 
-#animation-layer { position:fixed; inset:0; z-index:1000; pointer-events:none; overflow:visible; }
-.animation-ghost { pointer-events:none!important; transform-origin:top left!important; transition:none!important; }
+.held-die { position:absolute; z-index:65; pointer-events:none; background-repeat:no-repeat; filter:drop-shadow(0 5px 4px #17221f50); border-radius:12%; outline:1px solid #fff8d8b0; }
+.board-motion-layer { position:fixed; inset:0; z-index:1000; pointer-events:none; overflow:hidden; }
+.board-motion-piece { position:absolute; pointer-events:none; transform-origin:center; will-change:transform; filter:drop-shadow(0 4px 4px #15231c38); }
+.board-motion-piece--card { filter:drop-shadow(0 6px 6px #15231c35); }
+.board-motion-delta { position:absolute; padding:2px 6px; border:1px solid #c6b887; border-radius:5px; background:#fffbed; color:#315c49; font:600 13px/1.2 system-ui,"Microsoft YaHei",sans-serif; box-shadow:0 2px 5px #172b2418; white-space:nowrap; }
+.board-motion-delta--cost { color:#975040; }
 
 @media (max-width:760px){.preview-controls span{width:100%;margin-left:0}.preview-controls button{flex:1 1 45%;font-size:12px}}
 
@@ -393,6 +397,8 @@ body { font-family:"Microsoft YaHei",system-ui,-apple-system,sans-serif; }
 .bglab-event-timeline { min-height:150px; overflow:auto; flex:1 1 180px; padding:8px; }
 .bglab-action-dock { grid-column:1; grid-row:2; position:sticky; top:0; bottom:auto; z-index:100; display:flex; flex-direction:row; justify-content:center; align-items:center; align-content:center; flex-wrap:wrap; column-gap:clamp(10px,1.4vw,24px); row-gap:8px; margin-top:10px; padding:9px 12px; overflow-x:visible; }
 .bglab-action-state { flex:0 1 auto; min-width:0; max-width:min(100%,460px); }
+.bglab-game-shell[data-interaction-state="resolving"] .bglab-action-dock { min-height:64px; }
+.bglab-game-shell[data-interaction-state="resolving"] .bglab-action-state { max-width:100%; }
 .bglab-action-state-label { display:block; color:var(--bglab-text); font-size:16px; font-weight:700; line-height:1.3; white-space:normal; }
 .bglab-game-action-content { display:flex; align-items:center; justify-content:center; flex:0 1 auto; flex-wrap:wrap; gap:8px; }
 .white-castle-current-actions { display:flex; align-items:center; justify-content:center; flex:0 1 auto; flex-wrap:wrap; gap:8px; }
@@ -429,4 +435,8 @@ body { font-family:"Microsoft YaHei",system-ui,-apple-system,sans-serif; }
   .bglab-game-shell { width:calc(100% - 16px); margin:0 8px; }
   .bglab-turn-status { white-space:normal; }
   .bglab-game-sidebar { grid-template-columns:1fr; }
+  #app[data-playback="ai"] .bglab-action-dock { min-height:90px; }
+  .player-heading { align-items:center; }
+  .player-counters { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px; }
+  .player-counters b { padding:4px 6px; white-space:nowrap; }
 }
