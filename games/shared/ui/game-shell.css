@@ -633,11 +633,13 @@
   pointer-events: none;
 }
 
-.bglab-overlay-host:has(.bglab-final-result) {
+.bglab-overlay-host:has(.bglab-final-result:not([hidden])) {
   pointer-events: auto;
   background: rgba(20, 30, 38, .68);
   backdrop-filter: blur(1px);
 }
+
+.bglab-final-result[hidden] { display: none; }
 
 .bglab-final-result {
   position: absolute;

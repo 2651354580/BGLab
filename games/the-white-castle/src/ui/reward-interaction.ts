@@ -96,13 +96,22 @@ export function influencePaymentLabel(state: GameState, option: number): string 
 export function lanternCollectionStep(state: GameState, legalActions: GameAction[]): Extract<GameAction, { type: "chooseEffectOption" }> | undefined {
   const pending = state.pendingEffects[0];
   if (!pending || !["lantern", "daimyo-lantern"].includes(pending.source) || pending.effect.type !== "effectOrder") return undefined;
-  // A human collects the whole lantern reward in printed order. The engine
-  // still stops on resource selections, payments, and other actual decisions.
+  // Fixed gains can be collected together. Crossing a checkpoint makes order
+  // meaningful: a later seal reward may fund the earlier influence reward.
+  const position = state.players[state.currentPlayer].influence;
+  const advance = pending.effect.effects.reduce((sum, effect) => sum + (effect.type === "influence" ? effect.amount : 0), 0);
+  if (INFLUENCE_CHECKPOINTS.some(checkpoint => position < checkpoint.position && position + advance >= checkpoint.position)) return undefined;
   return legalActions.find((action): action is Extract<GameAction, { type: "chooseEffectOption" }> => action.type === "chooseEffectOption" && action.effectId === pending.id && action.option === 0);
 }
 
-export function deterministicMajorActionStart(state: GameState, legalActions: GameAction[]): Extract<GameAction, { type: "beginMajorAction" }> | undefined {
-  if (state.pendingEffects[0]?.effect.type !== "majorAction" || state.actionFlow) return undefined;
+export function deterministicMajorActionStart(state: GameState, legalActions: GameAction[], previousAction?: GameAction): Extract<GameAction, { type: "beginMajorAction" }> | undefined {
+  const pending = state.pendingEffects[0];
+  if (pending?.effect.type !== "majorAction" || state.actionFlow) return undefined;
+  // Returning to the menu must not immediately reopen the cancelled selection.
+  if (previousAction?.type === "cancelMajorActionSelection") return undefined;
+  // Audience and promotion are optional, once each. After either one, keep the
+  // menu visible so the player can end the action instead of doing the other.
+  if (pending.effect.action === "courtier" && pending.completedSubactions?.length) return undefined;
   const starts = legalActions.filter((action): action is Extract<GameAction, { type: "beginMajorAction" }> => action.type === "beginMajorAction");
   return starts.length === 1 ? starts[0] : undefined;
 }

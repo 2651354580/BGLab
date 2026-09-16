@@ -580,11 +580,12 @@
     ].join('')).join('');
     const winners = result.winnerSeats.map(seat => `<li data-winner-seat="${attr(seat)}">座位 ${escapeHtml(seat + 1)}</li>`).join('');
     return [
-      '<section class="bglab-final-result" data-final-result="true" role="dialog" aria-live="polite">',
+      '<section class="bglab-final-result" data-final-result="true" role="dialog" aria-label="终局计分" aria-live="polite">',
       `  <h2>${escapeHtml(result.title)}</h2>`,
       `  <p class="bglab-final-summary">${escapeHtml(result.summary)}</p>`,
       winners ? `  <ul class="bglab-final-winners">${winners}</ul>` : '',
       result.rows.length > 0 ? `  <table class="bglab-final-table">${header}<tbody>${rows}</tbody></table>` : '',
+      '<button type="button" class="bglab-action-button" data-result-visibility="close">收起计分，查看棋盘</button>',
       '</section>',
     ].join('');
   }
@@ -623,6 +624,7 @@
         normalizedSlots.actionAuxiliaryHtml,
         normalizedSlots.actionRollbackHtml,
       ),
+      normalized.finalResult ? '<button type="button" class="bglab-action-button" data-result-visibility="open">查看终局计分</button>' : '',
       '  </section>',
       normalizedSlots.turnSurfaceHtml
         ? `<section class="bglab-turn-surface" aria-label="当前行动选择">${normalizedSlots.turnSurfaceHtml}</section>`
@@ -655,6 +657,20 @@
       control.addEventListener('click', event => {
         if (control.disabled) return;
         handler(event, action);
+      });
+    }
+    const result = rootElement.querySelector?.('[data-final-result]');
+    if (result) {
+      const open = rootElement.querySelector('[data-result-visibility="open"]');
+      const close = rootElement.querySelector('[data-result-visibility="close"]');
+      const setVisible = visible => {
+        result.hidden = !visible;
+        (visible ? close : open)?.focus();
+      };
+      open?.addEventListener('click', () => setVisible(true));
+      close?.addEventListener('click', () => setVisible(false));
+      result.addEventListener('keydown', event => {
+        if (event.key === 'Escape') { event.preventDefault(); setVisible(false); }
       });
     }
   }

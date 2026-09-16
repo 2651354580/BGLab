@@ -25,6 +25,7 @@ import {
 import { addResourcePick, isResourceChoiceComplete, type ResourceChoiceDraft } from "./resource-choice";
 import type { ActionStep, AdapterSnapshot } from "../adapter/bglab-adapter";
 import { ManualGameSession } from "./manual-session";
+import { humanDecisionEnded } from "./decision-session";
 import { Bridge } from "../adapter/ws-bridge";
 import { records as authoritativeHistory, type BglabActionRecord } from "../../../shared/ui/action-history.js";
 import type { GameShellSlots, GameShellView } from "../../../shared/ui/game-shell.js";
@@ -798,7 +799,7 @@ function renderSealActions() {
 }
 
 function renderTurnControls() {
-  if (state.phase === "setup" || state.phase === "finished" || !canHumanAct() || undoStack.length === 0) return "";
+  if (state.phase === "setup" || state.phase === "finished" || !canHumanAct() || (undoStack.length === 0 && !undoLockedReason)) return "";
   const undoDisabled = Boolean(undoLockedReason) || undoStack.length === 0;
   const restartDisabled = Boolean(undoLockedReason) || !turnStartCheckpoint || undoStack.length === 0;
   const rollbackHint = undoLockedReason ?? (undoStack.length > 0 ? `可撤回 ${undoStack.length} 步` : "完成一个暂存操作后可以撤回");
@@ -819,10 +820,11 @@ function render() {
   const actionsMarkup = renderActions();
   const auxiliaryActions = renderSealActions();
   const turnControls = renderTurnControls();
-  const standaloneControls = adapter ? "" : `<div class="manual-game-controls"><span>全席位手动 · ${state.playerCount} 人局</span><label>新局人数 <select id="player-count" aria-label="新局人数">${([2, 3, 4] as const).map((count) => `<option value="${count}" ${count === selectedPlayerCount ? "selected" : ""}>${count} 人</option>`).join("")}</select></label><button id="new-game" type="button">开始新局</button></div>`;
+  const standaloneControls = adapter ? "" : `<div class="manual-game-controls"><span>全席位手动 · ${state.playerCount} 人局</span><label>新局人数 <select id="player-count" aria-label="新局人数" ${busy ? "disabled" : ""}>${([2, 3, 4] as const).map((count) => `<option value="${count}" ${count === selectedPlayerCount ? "selected" : ""}>${count} 人</option>`).join("")}</select></label><button id="new-game" type="button" ${busy ? "disabled" : ""}>开始新局</button></div>`;
   const shellView = buildWhiteCastleShellView(state, {
     busy,
-    announcement: pausedReason ?? (undoLockedReason ? `当前操作不可撤回：${undoLockedReason}` : announcement),
+    readOnly: Boolean(window.BG_REPLAY_MODE),
+    announcement: pausedReason ?? announcement,
     pausedReason,
     manualTest,
     playerTypes,
@@ -972,6 +974,7 @@ function restartTurn() {
   const entry = turnStartCheckpoint;
   restoreCheckpoint(entry);
   beginTurnTransaction();
+  render();
 }
 
 function actionStep(action: GameAction): ActionStep {
@@ -980,9 +983,9 @@ function actionStep(action: GameAction): ActionStep {
 }
 
 function applyDeterministicPresentationSteps(events: GameEvent[]): void {
-  while (true) {
+  while (!decisionEnded(state)) {
     const actions = getLegalActions(state);
-    const next = deterministicMajorActionStart(state, actions)
+    const next = deterministicMajorActionStart(state, actions, draftActions.at(-1))
       ?? deterministicGardenActivation(state, actions)
       ?? lanternCollectionStep(state, actions);
     if (!next) return;
@@ -994,11 +997,7 @@ function applyDeterministicPresentationSteps(events: GameEvent[]): void {
 }
 
 function decisionEnded(candidate: GameState): boolean {
-  if (candidate.phase === "finished") return true;
-  if (decisionStartState.phase === "setup") {
-    return candidate.phase !== "setup" || candidate.setupIndex > decisionStartState.setupIndex;
-  }
-  return candidate.turn > decisionStartState.turn || candidate.currentPlayer !== decisionStartState.currentPlayer;
+  return humanDecisionEnded(decisionStartState, candidate);
 }
 
 function commitDraft(): void {
@@ -1020,11 +1019,10 @@ function commitDraft(): void {
   clearTurnTransaction();
   if (state.phase !== "finished") beginTurnTransaction();
   saveState();
-  window.setTimeout(() => void requestCurrentAI(), 0);
 }
 
 async function requestCurrentAI() {
-  if (!adapter || pausedReason || state.phase === "finished" || playerTypes[state.currentPlayer] !== "ai") return;
+  if (busy || !adapter || pausedReason || state.phase === "finished" || playerTypes[state.currentPlayer] !== "ai") return;
   const turnId = adapter.decisionId();
   if (aiRequestId === turnId) return;
   aiRequestId = turnId;
@@ -1060,7 +1058,9 @@ async function playAnnouncements(messages: string[]) {
   for (const message of messages) {
     announcement = message;
     render();
-    await new Promise((resolve) => window.setTimeout(resolve, 700));
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches && !document.hidden) {
+      await new Promise((resolve) => window.setTimeout(resolve, 700));
+    }
   }
   announcement = null;
   render();
@@ -1097,6 +1097,7 @@ async function submitAction(action: GameAction) {
     busy = false;
     announcement = null;
     render();
+    void requestCurrentAI();
   }
 }
 
@@ -1135,6 +1136,7 @@ async function submitResourceChoice(picks: CappedResource[]) {
     busy = false;
     announcement = null;
     render();
+    void requestCurrentAI();
   }
 }
 
@@ -1146,7 +1148,7 @@ async function settleAll() {
   const sourceState = structuredClone(decisionStartState);
   const actor = state.players[state.currentPlayer].name;
   try {
-    while (state.pendingEffects[0]?.effect.type === "effectOrder" || state.pendingEffects[0]?.effect.type === "actionOrder") {
+    while (!decisionEnded(state) && (state.pendingEffects[0]?.effect.type === "effectOrder" || state.pendingEffects[0]?.effect.type === "actionOrder")) {
       const next = getLegalActions(state).find((action): action is Extract<GameAction, { type: "chooseEffectOption" }> => action.type === "chooseEffectOption" && action.option === 0);
       if (!next) break;
       const transition = applyAction(state, next);
@@ -1169,10 +1171,12 @@ async function settleAll() {
     busy = false;
     announcement = null;
     render();
+    void requestCurrentAI();
   }
 }
 
 async function animateMoves(events: GameEvent[], origins: Map<string, DOMRect>) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.hidden) return;
   for (const event of events) {
     if (event.type !== "MemberMoved") continue;
     const target = document.getElementById(`member-${event.member}`);
@@ -1182,8 +1186,16 @@ async function animateMoves(events: GameEvent[], origins: Map<string, DOMRect>) 
     const clone = target.cloneNode(true) as HTMLElement;
     Object.assign(clone.style, { position: "fixed", left: `${from.left}px`, top: `${from.top}px`, width: `${from.width}px`, height: `${from.height}px`, zIndex: "2000", margin: "0" });
     document.body.append(clone); target.style.visibility = "hidden";
-    await clone.animate([{ transform: "translate(0,0)" }, { transform: `translate(${to.left - from.left}px,${to.top - from.top}px)` }], { duration: 650, easing: "cubic-bezier(.2,.75,.2,1)" }).finished;
-    clone.remove(); target.style.visibility = "";
+    try {
+      await clone.animate([{ transform: "translate(0,0)" }, { transform: `translate(${to.left - from.left}px,${to.top - from.top}px)` }], { duration: 650, easing: "cubic-bezier(.2,.75,.2,1)" }).finished;
+    } catch (error) {
+      // Cancelling presentation must not report an already-applied action as a
+      // game failure. Other animation failures remain visible in diagnostics.
+      if (!(error instanceof DOMException && error.name === "AbortError")) console.warn("Member animation failed", error);
+    } finally {
+      clone.remove();
+      target.style.visibility = "";
+    }
   }
 }
 
@@ -1238,7 +1250,9 @@ function bind() {
   document.querySelector<HTMLSelectElement>("#player-count")?.addEventListener("change", (event) => {
     selectedPlayerCount = Number((event.target as HTMLSelectElement).value) as PlayerCount;
   });
-  document.querySelector("#new-game")?.addEventListener("click", () => startFrontend({ playerCount: selectedPlayerCount }));
+  document.querySelector("#new-game")?.addEventListener("click", () => {
+    if (!busy) startFrontend({ playerCount: selectedPlayerCount });
+  });
 }
 
 interface FrontendConfig {

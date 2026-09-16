@@ -109,6 +109,7 @@ export type GameShellView = {
 
 export type WhiteCastleUiState = {
   busy?: boolean;
+  readOnly?: boolean;
   announcement?: string | null;
   pausedReason?: string | null;
   undoLockedReason?: string | null;
@@ -537,6 +538,7 @@ function interactionFor(state: GameState, uiState: WhiteCastleUiState, legalActi
   const pending = state.pendingEffects[0];
   const flow = state.actionFlow;
   const isAi = uiState.playerTypes?.[state.currentPlayer] === "ai";
+  const canAct = !uiState.busy && !uiState.readOnly && !uiState.pausedReason && !uiState.error && !isAi && state.phase !== "finished";
   const setupOffer = uiState.setupDraftAction?.type === "chooseStartingPair"
     ? uiState.setupDraftAction.offer
     : undefined;
@@ -550,7 +552,7 @@ function interactionFor(state: GameState, uiState: WhiteCastleUiState, legalActi
   if (uiState.pausedReason || uiState.error) interactionState = "error";
   else if (state.phase === "finished") interactionState = "finished";
   else if (uiState.busy) interactionState = "resolving";
-  else if (isAi) interactionState = "waiting_next_decision";
+  else if (isAi || uiState.readOnly) interactionState = "waiting_next_decision";
   else if (flow?.stage === "chooseSource") interactionState = flow.selectedSource ? "source_selected" : "source_selectable";
   else if (flow?.stage === "chooseTarget") interactionState = "target_selectable";
   else if (flow?.stage === "preview") interactionState = "confirmation_pending";
@@ -560,7 +562,7 @@ function interactionFor(state: GameState, uiState: WhiteCastleUiState, legalActi
   else if (state.phase === "place") interactionState = "target_selectable";
   else if (has("finishResolution") || has("confirmMajorAction")) interactionState = "confirmation_pending";
 
-  const canConfirm = state.phase !== "finished" && (
+  const canConfirm = canAct && (
     has("finishResolution")
     || has("confirmMajorAction")
     || has("refreshCastleRoom")
@@ -572,9 +574,13 @@ function interactionFor(state: GameState, uiState: WhiteCastleUiState, legalActi
     ? pending.completedSubactions ?? []
     : [];
   const partialCourtierInstruction = completedCourtierSubactions.includes("recruit")
-    ? "请求觐见已完成，当前无法继续晋升，可结束家臣行动"
+    ? has("beginMajorAction")
+      ? "请求觐见已完成，可继续晋升或结束家臣行动"
+      : "请求觐见已完成，当前无法继续晋升，可结束家臣行动"
     : completedCourtierSubactions.includes("promote")
-      ? "晋升已完成，当前无法继续请求觐见，可结束家臣行动"
+      ? has("beginMajorAction")
+        ? "晋升已完成，可继续请求觐见或结束家臣行动"
+        : "晋升已完成，当前无法继续请求觐见，可结束家臣行动"
       : undefined;
   const unavailableMajorAction = pending?.effect.type === "majorAction"
     && has("finishMajorAction")
@@ -583,7 +589,10 @@ function interactionFor(state: GameState, uiState: WhiteCastleUiState, legalActi
       ?? `当前资源不足，无法执行${memberLabel(pending.effect.action)}行动，请跳过`
     : undefined;
   const instruction = uiState.pausedReason
+    ?? (uiState.readOnly ? "历史回放，只读查看" : undefined)
+    ?? (isAi ? uiState.announcement ?? "等待当前玩家行动" : undefined)
     ?? unavailableMajorAction
+    ?? (!flow ? partialCourtierInstruction : undefined)
     ?? uiState.announcement
     ?? phaseInstruction(state);
   const validatedSteps = (uiState.draftActions ?? []).map(actionDescription);
@@ -605,8 +614,8 @@ function interactionFor(state: GameState, uiState: WhiteCastleUiState, legalActi
     state: interactionState,
     instruction,
     validatedSteps: validatedSteps.length > 0 ? validatedSteps : undefined,
-    canCancel: !uiState.hasUndo && (has("cancelMajorActionSelection") || Boolean(flow?.selectedSource || flow?.selectedTarget)),
-    canSkip: Boolean(skipAction),
+    canCancel: canAct && has("cancelMajorActionSelection"),
+    canSkip: canAct && Boolean(skipAction),
     canConfirm,
     cancelLabel,
     skipLabel: skipAction?.type === "chooseEffectOption" && state.pendingEffects[0]?.effect.type === "influence"
