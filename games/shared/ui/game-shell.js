@@ -571,7 +571,8 @@
     if (result.columns && result.rows.some(row => row.values.length !== result.columns.length)) {
       throw new Error('final result columns must label every value');
     }
-    const header = result.columns ? `<thead><tr><th scope="col"></th>${result.columns.map(label => `<th scope="col">${escapeHtml(label)}</th>`).join('')}</tr></thead>` : '';
+    const playerCount = result.columns?.length || result.rows[0]?.values.length || 0;
+    const header = result.columns ? `<thead><tr><th scope="col"></th>${result.columns.map(label => `<th scope="col"><span class="bglab-final-player-name" title="${attr(label)}">${escapeHtml(label)}</span></th>`).join('')}</tr></thead>` : '';
     const rows = result.rows.map(row => [
       `<tr data-result-row-id="${attr(row.id)}">`,
       `  <th scope="row">${escapeHtml(row.label)}</th>`,
@@ -584,7 +585,7 @@
       `  <h2>${escapeHtml(result.title)}</h2>`,
       `  <p class="bglab-final-summary">${escapeHtml(result.summary)}</p>`,
       winners ? `  <ul class="bglab-final-winners">${winners}</ul>` : '',
-      result.rows.length > 0 ? `  <table class="bglab-final-table">${header}<tbody>${rows}</tbody></table>` : '',
+      result.rows.length > 0 ? `  <table class="bglab-final-table" data-player-count="${playerCount}">${header}<tbody>${rows}</tbody></table>` : '',
       '<button type="button" class="bglab-action-button" data-result-visibility="close">收起计分，查看棋盘</button>',
       '</section>',
     ].join('');

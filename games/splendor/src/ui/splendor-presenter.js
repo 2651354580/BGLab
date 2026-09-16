@@ -226,22 +226,23 @@
 
   function buildFinalResult(model) {
     if (String(model?.phase) !== 'finished') return undefined;
+    const players = [...(model?.players || [])].sort((left, right) => left.seat - right.seat);
     const winner = Array.isArray(model?.winners)
       ? model.winners.filter(seat => Number.isInteger(seat))
       : (Number.isInteger(model?.winner) ? [model.winner] : []);
     return {
       title: '璀璨宝石 · 终局计分',
-      columns: ['总分', '发展卡数量', '贵族数量'],
+      columns: players.map(player => player.name || `P${Number(player.seat) + 1}`),
       winnerSeats: winner,
       summary: winner.length
         ? winner.map(seat => actorName(model, seat)).join('、')
           + (winner.length > 1 ? ' 共享胜利' : ' 获胜')
         : '对局已结束',
-      rows: (model?.players || []).map(player => ({
-        id: `seat-${player.seat}`,
-        label: player.name,
-        values: [integer(player.score), integer(player.purchasedCount), Array.isArray(player.nobles) ? player.nobles.length : 0],
-      })),
+      rows: [
+        {id: 'total', label: '总分', values: players.map(player => integer(player.score))},
+        {id: 'purchased', label: '发展卡数量', values: players.map(player => integer(player.purchasedCount))},
+        {id: 'nobles', label: '贵族数量', values: players.map(player => Array.isArray(player.nobles) ? player.nobles.length : 0)},
+      ],
     };
   }
 
