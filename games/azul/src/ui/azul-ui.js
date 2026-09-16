@@ -86,12 +86,10 @@
 
   function renderFactories(model) {
     const center = geometry.FACTORY_STAGE.width / 2;
-    const radius = 160;
+    const factoryPositions = geometry.factoryPositions(model.factories.length);
     let html = '';
     model.factories.forEach((factory, factoryIndex) => {
-      const angle = (factoryIndex / model.factories.length) * Math.PI * 2 - Math.PI / 2;
-      const x = center + radius * Math.cos(angle) - 70;
-      const y = center + radius * Math.sin(angle) - 70;
+      const {x, y, scale} = factoryPositions[factoryIndex];
       const selected = sourceStep()?.source === 'factory' && sourceStep()?.factoryIndex === factoryIndex;
       const positions = [
         {x:5, y:5, rotate:-8}, {x:75, y:5, rotate:5},
@@ -105,7 +103,7 @@
           + `data-action="choose-source" data-source="factory" data-factory="${factoryIndex}" data-color="${entry.color}" `
           + `aria-label="工坊 ${factoryIndex + 1} 的${colorName[entry.color]}花砖"></button>`;
       }).join('');
-      html += `<div class="factory-wrap" style="left:${x}px;top:${y}px"><div class="factory-disc${selected ? ' is-selected' : ''}">${tiles}</div></div>`;
+      html += `<div class="factory-wrap" aria-label="工坊 ${factoryIndex + 1}" style="left:${x}px;top:${y}px;transform:scale(${scale});transform-origin:top left"><div class="factory-disc${selected ? ' is-selected' : ''}">${tiles}</div></div>`;
     });
 
     const groups = model.center.reduce((result, entry) => {

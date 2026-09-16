@@ -16,10 +16,23 @@
   });
   const FACTORY_STAGE = Object.freeze({width:500, height:500});
 
+  function factoryPositions(count) {
+    const {size, radius} = count <= 5 ? {size:140, radius:160}
+      : count <= 7 ? {size:112, radius:180} : {size:90, radius:200};
+    return Array.from({length:count}, (_, index) => {
+      const angle = index / count * Math.PI * 2 - Math.PI / 2;
+      return {
+        x:FACTORY_STAGE.width / 2 + radius * Math.cos(angle) - size / 2,
+        y:FACTORY_STAGE.height / 2 + radius * Math.sin(angle) - size / 2,
+        scale:size / 140,
+      };
+    });
+  }
+
   function viewportFor(width, stage) {
     const scale = Math.min(1, Math.max(0, Number(width) || 0) / stage.width);
     return {scale, width:stage.width * scale, height:stage.height * scale};
   }
 
-  return Object.freeze({BOARD, FACTORY_STAGE, viewportFor});
+  return Object.freeze({BOARD, FACTORY_STAGE, factoryPositions, viewportFor});
 });
