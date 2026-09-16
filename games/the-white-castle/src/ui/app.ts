@@ -127,7 +127,10 @@ function atlasStyle(atlasName: CardAtlas, card: number) {
 }
 
 function dynamicBoardCards(): BoardCard[] {
-  const cards = BOARD_CARDS.map((card) => ({ ...card }));
+  const cards = BOARD_CARDS.filter((card) => (
+    (card.id !== "steward-deck" || state.board.stewardDeck.length > 0)
+    && (card.id !== "diplomat-deck" || state.board.diplomatDeck.length > 0)
+  )).map((card) => ({ ...card }));
   const set = (id: string, card: number) => { const target = cards.find((item) => item.id === id); if (target) target.card = card; };
   const setMaterial = (id: string, materialId: string) => set(id, materialAssetCard(materialId));
   setMaterial("daimyo", `daimyo-card-${state.board.daimyoCard}`);

@@ -433,8 +433,9 @@
 
     renderMarket(model) {
       for (let level = 3; level >= 1; level -= 1) {
-        const depleted = model.decks[level] ? '' : ' spl_depleted';
-        const deck = `<button type="button" class="spl_drawpile spl_back_${level}${depleted}" data-deck-level="${level}" onclick="BGLabFrontend.reserveDeck(${level})" aria-label="保留 ${level} 级牌堆"><span class="drawpile-count">${model.decks[level]}</span></button>`;
+        const deck = model.decks[level] > 0
+          ? `<button type="button" class="spl_drawpile spl_back_${level}" data-deck-level="${level}" onclick="BGLabFrontend.reserveDeck(${level})" aria-label="保留 ${level} 级牌堆"><span class="drawpile-count">${model.decks[level]}</span></button>`
+          : `<span class="spl_drawpile spl_drawpile--empty" data-deck-level="${level}" role="img" aria-label="${level} 级牌堆已空"></span>`;
         document.getElementById(`row_${level}`).innerHTML = deck + model.market[level].map(card => this.cardHtml(card)).join('');
       }
       document.getElementById('noblesbar').innerHTML = model.nobles.map(noble => this.nobleHtml(noble)).join('');

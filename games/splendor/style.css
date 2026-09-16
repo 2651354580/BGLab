@@ -229,7 +229,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
 }
 .spl_drawpile:hover { transform: translateY(-2px); }
 .spl_drawpile.canselect { animation: cardpulse 1s infinite alternate; }
-.spl_drawpile.spl_depleted { opacity: 0.25; cursor: not-allowed; }
+.spl_drawpile--empty { background: none; box-shadow: none; pointer-events: none; }
 .spl_back_1 { background-position: 0 -500%; }
 .spl_back_2 { background-position: -100% -500%; }
 .spl_back_3 { background-position: -200% -500%; }
