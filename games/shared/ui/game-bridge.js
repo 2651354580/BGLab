@@ -57,6 +57,7 @@
     const bridge = {
       _ws: null,
       _ready: false,
+      _closed: false,
       _pending: null,
       _validationInFlight: false,
       _retries: 0,
@@ -78,8 +79,19 @@
         return this._tryConnect();
       },
 
+      close() {
+        this._closed = true;
+        if (this._reconnectTimer) timerClear(this._reconnectTimer);
+        this._reconnectTimer = null;
+        const socket = this._ws;
+        this._ws = null;
+        this._ready = false;
+        this._rejectPending(new Error('Game session closed'));
+        socket?.close();
+      },
+
       _tryConnect() {
-        if (page?.BG_REPLAY_MODE) return false;
+        if (this._closed || page?.BG_REPLAY_MODE) return false;
         const currentState = this._ws?.readyState;
         if (this._ws && (currentState === openState || currentState === connectingState)) return false;
         if (this._reconnectTimer) {
@@ -268,7 +280,7 @@
       },
 
       _scheduleReconnect() {
-        if (this._reconnectTimer || page?.BG_REPLAY_MODE) return;
+        if (this._closed || this._reconnectTimer || page?.BG_REPLAY_MODE) return;
         const delay = Math.min(reconnectMaxMs, reconnectInitialMs * Math.max(1, this._retries));
         this._reconnectTimer = timerSet(() => {
           this._reconnectTimer = null;

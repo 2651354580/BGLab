@@ -60,6 +60,7 @@ _SERVER_THREAD: threading.Thread | None = None
 _SERVER_STOP_EVENT = threading.Event()
 _SERVER_READY_EVENT = threading.Event()
 _GAME_SESSION_DONE_EVENT = threading.Event()
+_RESULT_CONTROL_LOCK = threading.Lock()
 _GAME_SESSION_PREPARED_EVENT = threading.Event()
 _SERVER_ERROR: str | None = None
 _ACTIVE_GAME_ID: str | None = None
@@ -169,7 +170,7 @@ def _browser_bridge_retry_script() -> str:
     return (
         'setInterval(function(){'
         'if(typeof Bridge!=="undefined"&&(!Bridge._ws||Bridge._ws.readyState!==1)'
-        '&&!Bridge._reconnectTimer){'
+        '&&!Bridge._closed&&!Bridge._reconnectTimer){'
         'var _bcConnect=typeof Bridge._tryConnect==="function"?Bridge._tryConnect:'
         'typeof Bridge.init==="function"?Bridge.init:null;'
         'if(_bcConnect){_bcConnect.call(Bridge)}}},3000);'
@@ -221,6 +222,12 @@ def _validated_manifest(
     else:
         port = raw_port
     return title, status, tuple(player_types), tuple(players), port
+
+
+def get_game_session_lifecycle() -> tuple[str | None, bool, str | None]:
+    """Non-secret identity and completion of this process's session."""
+    with _SERVER_LOCK:
+        return _ACTIVE_GAME_ID, _GAME_SESSION_DONE_EVENT.is_set(), _SERVER_ERROR
 
 
 def get_presentation_metadata(
@@ -813,6 +820,7 @@ def abort_game() -> str:
 
 def rematch_game() -> str:
     """Finish the active result session and start a fresh game with its lineup."""
+    global _SERVER_ERROR
     with _SERVER_LOCK:
         runtime = _ACTIVE_RUNTIME
         thread = _SERVER_THREAD
@@ -827,16 +835,20 @@ def rematch_game() -> str:
             manifest = runtime.store.read_manifest()
             delay = int(manifest.get("ai_delay", 800))
             engine = str(manifest.get("engine", "splendor"))
-        except Exception:
-            delay = 800
-            engine = "splendor"
+            mode = "manual-test" if manifest.get("manual_test") else str(
+                manifest.get("mode") or ("human_vs_ai" if human_mode else "ai_vs_ai")
+            )
+            model = manifest.get("model")
+        except (OSError, ValueError, TypeError) as exc:
+            return f"ERROR: cannot read completed game settings: {exc}"
         session_capability = _ACTIVE_SESSION_CAPABILITY
     stopped = _stop_game_server(end_session=False)
     if not stopped.startswith("Game stopped"):
         return f"ERROR: cannot close completed game: {stopped}"
-    return _bg_tool_call({
+    result = _bg_tool_call({
         "engine": engine,
-        "mode": "human_vs_ai" if human_mode else "ai_vs_ai",
+        "mode": mode,
+        "model": model,
         "player_count": player_count,
         "delay": delay,
         "open_browser": False,
@@ -845,6 +857,12 @@ def rematch_game() -> str:
         # still receives a new gameId and isolated persistent state.
         "_session_capability": session_capability,
     })
+    if result.startswith("ERROR:"):
+        with _SERVER_LOCK:
+            if _SERVER_THREAD is None or not _SERVER_THREAD.is_alive():
+                _SERVER_ERROR = result
+                _GAME_SESSION_DONE_EVENT.set()
+    return result
 
 
 def _open_game_page() -> None:
@@ -890,10 +908,11 @@ def _browser_ui_script(
   function systemLine(text){cinematic(cfg.humanPid===null?0:cfg.humanPid,text,'dialogue')}
   function buildInitialAnchorGate(){if(document.getElementById('bglab-initial-snapshot-gate'))return;var gate=document.createElement('div');gate.id='bglab-initial-snapshot-gate';gate.setAttribute&&gate.setAttribute('role','status');gate.style.cssText='position:fixed;inset:0;z-index:20000;pointer-events:auto;display:flex;align-items:center;justify-content:center;background:rgba(7,12,22,.38);color:#fff;font:600 15px sans-serif;backdrop-filter:blur(2px)';gate.textContent='正在确认初始对局快照…';document.body.appendChild(gate)}
   function releaseInitialAnchor(turnId){if(initialAnchor.confirmed||!initialAnchor.turnId||turnId!==initialAnchor.turnId)return;initialAnchor.confirmed=true;window.__BGLAB_INITIAL_SNAPSHOT_CONFIRMED__=true;var gate=document.getElementById('bglab-initial-snapshot-gate');if(gate)gate.remove();initialAnchorResolve()}
-  var rematchReloadPending=false;
-  function waitForRematch(){if(rematchReloadPending)return;rematchReloadPending=true;setTimeout(async function probe(){try{var response=await fetch(window.location.href,{cache:'no-store'}),content=await response.text();if(response.ok&&content.indexOf('window.BG_GAME_ID=')!==-1&&content.indexOf('window.BG_GAME_ID="'+cfg.gameId+'"')===-1){window.location.reload();return}}catch(e){}setTimeout(probe,500)},500)}
-  function onMessage(event){try{var msg=JSON.parse(event.data);if(msg.type==='frontend_restore'){if(typeof window.__BGLAB_APPLY_SERVER_SNAPSHOT__!=='function')return;try{window.__BGLAB_APPLY_SERVER_SNAPSHOT__(msg.state||null,msg.turnId||null);window.__BGLAB_SERVER_SNAPSHOT_READY__=true}catch(e){if(window.BGLabFrontend&&typeof BGLabFrontend.pause==='function')BGLabFrontend.pause('Confirmed snapshot restore failed: '+(e&&e.message?e.message:e));return}}else if(msg.type==='snapshot_ack')releaseInitialAnchor(msg.turnId);else if(msg.type==='game_retry_ready'){var key='bglab-game-retry:'+cfg.gameId,epoch=String(msg.epoch||'');if(epoch&&window.sessionStorage&&sessionStorage.getItem(key)!==epoch){sessionStorage.setItem(key,epoch);window.location.reload()}}else if(msg.type==='persist_snapshot'){var snapshot=window.BGLabGameAdapter&&BGLabGameAdapter.snapshot();if(snapshot&&(!msg.expectedTurnId||String(snapshot.decisionId)===String(msg.expectedTurnId))&&window.Bridge&&typeof Bridge.persist==='function'){if(msg.expectedTurnId)initialAnchor.turnId=String(msg.expectedTurnId);Bridge.persist()}}else if(msg.type==='game_chat'||msg.type==='game_chat_status')receiveChat(msg);else if(msg.type==='game_chat_history')(msg.events||[]).forEach(receiveChat);else if(msg.type==='chat_ack')chatReceipt(msg);else if(msg.type==='turn_report')cinematic(msg.pid,msg.text,'thought',msg.to_pid);else if(msg.type==='chat_error')chatReceipt(msg);else if(msg.type==='game_control_ack'){systemLine(msg.message||'请求已接收');if(msg.command==='rematch')waitForRematch()}else if(msg.type==='game_control_error')systemLine('操作失败: '+msg.error)}catch(e){}}
-  function hook(){var ws=socket();if(!ws||ws===hooked)return;hooked=ws;ws.addEventListener('message',onMessage);send({type:'game_retry_probe'});send({type:'frontend_sync'});if(cfg.chatEnabled){send({type:'game_chat_history'});if(pendingChat)send(pendingChat)}}
+  var rematchReloadPending=false,resultCommand=null,resultAcknowledged=false;
+  function resultControlError(text){rematchReloadPending=false;resultCommand=null;resultAcknowledged=false;var box=document.getElementById('bglab-result-controls');if(box){box.firstChild.textContent=text;box.querySelectorAll('button').forEach(function(b){b.disabled=!socket()})}systemLine(text)}
+  function waitForRematch(){if(rematchReloadPending)return;rematchReloadPending=true;var deadline=Date.now()+45000;setTimeout(async function probe(){if(!rematchReloadPending)return;if(Date.now()>=deadline){resultControlError('新对局连接未完成，请返回 TUI 查看或重试。旧局记录已保留。');return}var controller=typeof AbortController==='function'?new AbortController():null,timeout=controller?setTimeout(function(){controller.abort()},3000):null;try{var response=await fetch(window.location.href,{cache:'no-store',...(controller?{signal:controller.signal}:{})}),content=await response.text();if(response.ok&&content.indexOf('window.BG_GAME_ID=')!==-1&&content.indexOf('window.BG_GAME_ID="'+cfg.gameId+'"')===-1){window.location.reload();return}}catch(e){}finally{if(timeout!==null)clearTimeout(timeout)}setTimeout(probe,500)},500)}
+  function onMessage(event){try{var msg=JSON.parse(event.data);if(msg.type==='frontend_restore'){if(typeof window.__BGLAB_APPLY_SERVER_SNAPSHOT__!=='function')return;try{window.__BGLAB_APPLY_SERVER_SNAPSHOT__(msg.state||null,msg.turnId||null);window.__BGLAB_SERVER_SNAPSHOT_READY__=true}catch(e){if(window.BGLabFrontend&&typeof BGLabFrontend.pause==='function')BGLabFrontend.pause('Confirmed snapshot restore failed: '+(e&&e.message?e.message:e));return}}else if(msg.type==='snapshot_ack')releaseInitialAnchor(msg.turnId);else if(msg.type==='game_retry_ready'){var key='bglab-game-retry:'+cfg.gameId,epoch=String(msg.epoch||'');if(epoch&&window.sessionStorage&&sessionStorage.getItem(key)!==epoch){sessionStorage.setItem(key,epoch);window.location.reload()}}else if(msg.type==='persist_snapshot'){var snapshot=window.BGLabGameAdapter&&BGLabGameAdapter.snapshot();if(snapshot&&(!msg.expectedTurnId||String(snapshot.decisionId)===String(msg.expectedTurnId))&&window.Bridge&&typeof Bridge.persist==='function'){if(msg.expectedTurnId)initialAnchor.turnId=String(msg.expectedTurnId);Bridge.persist()}}else if(msg.type==='game_chat'||msg.type==='game_chat_status')receiveChat(msg);else if(msg.type==='game_chat_history')(msg.events||[]).forEach(receiveChat);else if(msg.type==='chat_ack')chatReceipt(msg);else if(msg.type==='turn_report')cinematic(msg.pid,msg.text,'thought',msg.to_pid);else if(msg.type==='chat_error')chatReceipt(msg);else if(msg.type==='game_control_ack'){resultCommand=msg.command;resultAcknowledged=true;systemLine(msg.message||'请求已接收');if(msg.command==='rematch')waitForRematch()}else if(msg.type==='game_control_error')resultControlError('操作失败: '+msg.error)}catch(e){}}
+  function hook(){var ws=socket();if(!ws||ws===hooked)return;hooked=ws;ws.addEventListener('message',onMessage);ws.addEventListener('close',function(){if(resultCommand!=='end'||!resultAcknowledged)return;if(window.Bridge&&typeof Bridge.close==='function')Bridge.close();var box=document.getElementById('bglab-result-controls');if(box){box.firstChild.textContent='对局连接已关闭，结果已保留。可以关闭此页面。';box.querySelectorAll('button').forEach(function(b){b.disabled=true})}});send({type:'game_retry_probe'});send({type:'frontend_sync'});if(cfg.chatEnabled){send({type:'game_chat_history'});if(pendingChat)send(pendingChat)}}
   function guardAIRequest(){if(!window.Bridge||typeof Bridge.requestAITurn!=='function'||Bridge.requestAITurn.__bglabInitialAnchorGuard)return;var original=Bridge.requestAITurn.bind(Bridge);var guarded=async function(){await initialAnchorPromise;return original.apply(null,arguments)};guarded.__bglabInitialAnchorGuard=true;Bridge.requestAITurn=guarded}
   function confirmInitialAnchor(){if(initialAnchor.confirmed||!window.__BGLAB_SERVER_SNAPSHOT_READY__||!socket()||!window.BGLabGameAdapter||typeof BGLabGameAdapter.snapshot!=='function'||!window.Bridge||typeof Bridge.persist!=='function')return;var now=Date.now();if(initialAnchor.sentAt&&now-initialAnchor.sentAt<1500)return;var snapshot;try{snapshot=BGLabGameAdapter.snapshot()}catch(e){return}var turnId=snapshot&&snapshot.decisionId;if(!turnId)return;initialAnchor.turnId=String(turnId);if(Bridge.persist())initialAnchor.sentAt=now}
   var chatSeen=new Set(),pendingChat=null;
@@ -911,7 +930,7 @@ def _browser_ui_script(
     function submit(){var input=document.getElementById('bglab-chat-input'),message=input.value.trim();if(!message)return;var to=Number(select.value);if(!pendingChat||pendingChat.message!==message||pendingChat.toPid!==to)pendingChat={type:'game_chat',toPid:to,message:message,clientId:window.crypto&&crypto.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2)};if(!send(pendingChat))chatLine('连接未就绪，消息已保留，请稍后重试。')}
     document.getElementById('bglab-chat-send').onclick=submit;document.getElementById('bglab-chat-input').onkeydown=function(e){if(e.key==='Enter'&&!e.isComposing)submit()};
   }
-  function resultControls(){if(!initialAnchor.confirmed||!window.BGLabFrontend||!BGLabFrontend.status||BGLabFrontend.status().phase!=='finished'){var stale=document.getElementById('bglab-result-controls');if(stale)stale.remove();return;}if(document.getElementById('bglab-result-controls'))return;var box=document.createElement('div');box.id='bglab-result-controls';box.style.cssText='position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:13000;background:#11182a;border:1px solid #60739b;border-radius:10px;padding:12px;color:#fff;font:14px sans-serif;box-shadow:0 4px 20px #000a';box.innerHTML='<span style="margin-right:10px">对局已结束</span><button data-command="rematch">再来一局</button> <button data-command="end">结束</button>';box.onclick=function(e){var command=e.target&&e.target.dataset&&e.target.dataset.command;if(!command)return;if(send({type:'game_control',command:command})){box.querySelectorAll('button').forEach(function(b){b.disabled=true});box.firstChild.textContent=command==='rematch'?'正在创建新对局…':'正在关闭…'}else alert('连接未就绪，请使用 TUI 的 /bg stop')};document.body.appendChild(box)}
+  function resultControls(){if(!initialAnchor.confirmed||!window.BGLabFrontend||!BGLabFrontend.status||BGLabFrontend.status().phase!=='finished'){var stale=document.getElementById('bglab-result-controls');if(stale)stale.remove();return;}if(document.getElementById('bglab-result-controls'))return;var box=document.createElement('div');box.id='bglab-result-controls';box.style.cssText='position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:13000;background:#11182a;border:1px solid #60739b;border-radius:10px;padding:12px;color:#fff;font:14px sans-serif;box-shadow:0 4px 20px #000a';box.innerHTML='<span style="margin-right:10px">对局已结束</span><button data-command="rematch">再来一局</button> <button data-command="end">结束</button>';box.onclick=function(e){var command=e.target&&e.target.dataset&&e.target.dataset.command;if(!command||resultCommand)return;if(send({type:'game_control',command:command})){resultCommand=command;box.querySelectorAll('button').forEach(function(b){b.disabled=true});box.firstChild.textContent=command==='rematch'?'正在创建新对局…':'正在关闭…'}else alert('连接未就绪，请使用 TUI 的 /bg stop')};document.body.appendChild(box)}
   function maintain(){try{hook()}catch(e){}try{guardAIRequest()}catch(e){}try{confirmInitialAnchor()}catch(e){}try{resultControls()}catch(e){}}
   function init(){buildInitialAnchorGate();buildStage();setInterval(maintain,100);maintain()}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
@@ -1998,6 +2017,8 @@ async def _run_ai_server(definition: GameDefinition, player_types: list[str] | N
             await ws.send(_j.dumps(event, ensure_ascii=False))
 
         async def send_retry_ready() -> None:
+            if result_only:
+                return
             retry_ready = runtime.manual_retry_ready()
             if not isinstance(retry_ready, dict):
                 return
@@ -2066,6 +2087,25 @@ async def _run_ai_server(definition: GameDefinition, player_types: list[str] | N
                     continue
                 if msg.get("type") == "state_snapshot":
                     snapshot_payload = msg.get("state", {})
+                    if result_only:
+                        # Only acknowledge the frozen result echoed by the
+                        # browser. No live recovery or persistence API exists
+                        # in a completed result session.
+                        confirmed = runtime.store.read_snapshot()
+                        matches = (
+                            msg.get("turnId") == confirmed.get("turn_id")
+                            and isinstance(snapshot_payload, dict)
+                            and authority_hash(snapshot_payload) == authority_hash(confirmed["state"])
+                        )
+                        await ws.send(_j.dumps({
+                            "type": "snapshot_ack" if matches else "snapshot_error",
+                            "turnId": msg.get("turnId"),
+                            **({} if matches else {
+                                "error": "result-only session requires the saved final state",
+                                "paused": False,
+                            }),
+                        }))
+                        continue
                     snapshot_wrapper = (
                         snapshot_payload.get("wrapper", snapshot_payload.get("st", {}))
                         if isinstance(snapshot_payload, dict)
@@ -2190,14 +2230,6 @@ async def _run_ai_server(definition: GameDefinition, player_types: list[str] | N
                                 "paused": True,
                             }, ensure_ascii=False))
                             continue
-                    if result_only:
-                        # The terminal snapshot was validated before startup;
-                        # this session is read-only and must not create a
-                        # AuthorityWorker or persist a browser echo.
-                        await ws.send(_j.dumps({
-                            "type": "snapshot_ack", "turnId": msg.get("turnId"),
-                        }))
-                        continue
                     try:
                         snapshot_recovery = runtime.save_snapshot(
                             str(msg.get("turnId", "")),
@@ -2397,16 +2429,47 @@ async def _run_ai_server(definition: GameDefinition, player_types: list[str] | N
                             "type": "game_control_error", "error": "game is not finished",
                         }))
                         continue
-                    await ws.send(_j.dumps({
-                        "type": "game_control_ack", "command": command,
-                        "message": "正在创建新对局" if command == "rematch" else "正在关闭对局",
-                    }, ensure_ascii=False))
+                    if not _RESULT_CONTROL_LOCK.acquire(blocking=False):
+                        await ws.send(_j.dumps({
+                            "type": "game_control_error", "error": "已有结束或重开操作正在处理，请稍候。",
+                        }, ensure_ascii=False))
+                        continue
+                    try:
+                        await ws.send(_j.dumps({
+                            "type": "game_control_ack", "command": command,
+                            "message": "正在创建新对局" if command == "rematch" else "正在关闭对局",
+                        }, ensure_ascii=False))
+                    except BaseException:
+                        _RESULT_CONTROL_LOCK.release()
+                        raise
                     target = rematch_game if command == "rematch" else stop_game
-                    threading.Thread(
-                        target=target,
+                    control_loop = asyncio.get_running_loop()
+                    def run_control(target=target, ws=ws, control_loop=control_loop):
+                        try:
+                            try:
+                                result = target()
+                            except Exception as exc:
+                                result = f"ERROR: {exc}"
+                            if result.startswith(("ERROR:", "Game stop failed")) and not control_loop.is_closed():
+                                notification = ws.send(_j.dumps({
+                                    "type": "game_control_error", "error": result,
+                                }, ensure_ascii=False))
+                                try:
+                                    asyncio.run_coroutine_threadsafe(notification, control_loop)
+                                except RuntimeError:
+                                    notification.close()
+                        finally:
+                            _RESULT_CONTROL_LOCK.release()
+                    control_thread = threading.Thread(
+                        target=run_control,
                         name=f"bg-browser-{command}",
                         daemon=True,
-                    ).start()
+                    )
+                    try:
+                        control_thread.start()
+                    except BaseException:
+                        _RESULT_CONTROL_LOCK.release()
+                        raise
                     continue
                 if msg.get("type") != "ai_turn":
                     continue
@@ -2936,6 +2999,7 @@ def _start_server_thread(definition: GameDefinition, player_types: list[str],
     """Start the game server in a background thread."""
     global _SERVER_THREAD, _SERVER_ERROR, _ACTIVE_GAME_ID
     global _ACTIVE_SESSION_CAPABILITY
+    _GAME_SESSION_DONE_EVENT.clear()
     _SERVER_STOP_EVENT.clear()
     _SERVER_READY_EVENT.clear()
     _SERVER_ERROR = None
@@ -3082,7 +3146,7 @@ def resume_game(game_id: str | None = None) -> str:
                 f"ERROR: game {store.game_id} result session health failed: "
                 f"{health_error}; cleanup: {stopped}"
             )
-        return f"Game {store.game_id} result-only session: http://localhost:8080"
+        return f"Game {store.game_id} result-only session: {_session_url()}"
     if not snapshot:
         return f"ERROR: game {store.game_id} has no confirmed frontend snapshot."
     snapshot_state = snapshot.get("state") if isinstance(snapshot, dict) else None

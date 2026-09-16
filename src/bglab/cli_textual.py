@@ -989,6 +989,7 @@ class GamePresentationSession:
     player_types: tuple[str, ...]
     ai_seats: tuple[int, ...]
     poll_task: asyncio.Task | None
+    host_bound: bool = False
 
     @property
     def report_dir(self) -> Path:
@@ -2067,6 +2068,8 @@ class BglabREPL(App):
     def _make_game_session(
         self, metadata: GamePresentationMetadata, generation: int,
     ) -> GamePresentationSession:
+        from bglab.tools.bg_play import get_game_session_lifecycle
+
         _, manifest_mtime_ns = self._game_report_stat(metadata.manifest_path)
         size, mtime_ns = self._game_report_stat(metadata.report_path)
         ai_seats = tuple(
@@ -2096,6 +2099,7 @@ class BglabREPL(App):
             player_types=metadata.player_types,
             ai_seats=ai_seats,
             poll_task=None,
+            host_bound=get_game_session_lifecycle()[0] == metadata.game_id,
         )
 
     def _session_is_current(self, session: GamePresentationSession) -> bool:
@@ -2471,6 +2475,28 @@ class BglabREPL(App):
     async def _poll_game_session(self, session: GamePresentationSession) -> bool:
         if not self._session_is_current(session):
             return False
+        from bglab.tools.bg_play import get_game_session_lifecycle, get_presentation_metadata
+
+        active_game_id, closed, error = get_game_session_lifecycle()
+        if active_game_id == session.game_id:
+            session.host_bound = True
+        elif session.host_bound and self._game_blocked:
+            if active_game_id is not None:
+                metadata = await asyncio.to_thread(get_presentation_metadata, active_game_id)
+                if self._session_is_current(session) and get_game_session_lifecycle()[0] == active_game_id:
+                    await self._activate_game_session(metadata)
+                return False
+            if closed:
+                if await self._complete_game_shutdown("Game stopped") and error:
+                    await self.query_one(MessagesArea).mount(Static(
+                        f"  对局服务已停止：{rich_escape(error)}\n"
+                        "  原对局记录已保留，可重新启动或恢复对局。",
+                        classes="error-summary",
+                    ))
+                return False
+            # A rematch briefly has no server while the previous ports close.
+            # Missing metadata alone is not a completed session.
+            return False
         if not self._refresh_game_session_metadata_if_changed(session):
             return False
         before = self._game_report_stat(session.report_path)
@@ -2536,6 +2562,10 @@ class BglabREPL(App):
             return old_session
         task = old_session.poll_task
         old_session.poll_task = None
+        if task is asyncio.current_task():
+            # Browser controls can replace/close the session from this poller.
+            # Its identity is already detached; never cancel or await itself.
+            return old_session
         if not task.done():
             task.cancel()
         try:

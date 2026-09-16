@@ -44,6 +44,8 @@ export type GameBridge = {
   _validationInFlight: boolean;
   _retries: number;
   _reconnectTimer: ReturnType<typeof setTimeout> | null;
+  _closed: boolean;
+  close(): void;
   validationInFlight(): boolean;
   trace(event: string, details?: Record<string, unknown>): void;
   init(): boolean;
